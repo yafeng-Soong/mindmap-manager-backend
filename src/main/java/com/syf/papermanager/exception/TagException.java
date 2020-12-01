@@ -5,10 +5,10 @@ package com.syf.papermanager.exception;
  * @package: com.syf.papermanager.exception
  * @description:
  * @author: songyafeng
- * @create_time: 2020/11/21 20:44
+ * @create_time: 2020/12/1 10:21
  */
-public class PaperException extends RuntimeException{
-    public PaperException(String message) {
+public class TagException extends RuntimeException{
+    public TagException(String message) {
         super(message);
     }
 }

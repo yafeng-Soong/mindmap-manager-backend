@@ -95,4 +95,14 @@ public class TagController extends BaseController {
         response.setData("改变顺序成功");
         return response;
     }
+
+    @ApiOperation("移动节点改变父节点")
+    @PostMapping("/reparent")
+    public ResponseEntity reparentTag(@RequestBody @Validated TagReparentVo reparentVo) {
+       ResponseEntity response = new ResponseEntity();
+       User currentUser = getCurrentUser();
+       tagService.reparentTag(reparentVo, currentUser.getId());
+       response.setData("改变位置成功");
+       return response;
+    }
 }

@@ -22,4 +22,5 @@ public interface TagService extends IService<Tag> {
     int removeTag(TagRemoveOrRePositionVo removeVo, User user);
     int changePosition(TagRemoveOrRePositionVo rePositionVo, Integer userId);
     int changeOrder(TagReOrderVo reOrderVo, Integer userId);
+    int reparentTag(TagReparentVo reparentVo, Integer userId);
 }

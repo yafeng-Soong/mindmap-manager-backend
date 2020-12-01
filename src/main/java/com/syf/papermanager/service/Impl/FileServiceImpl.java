@@ -1,7 +1,7 @@
 package com.syf.papermanager.service.Impl;
 
 import com.syf.papermanager.constant.Constant;
-import com.syf.papermanager.exception.PaperException;
+import com.syf.papermanager.exception.FileUploadException;
 import com.syf.papermanager.mapper.PaperMapper;
 import com.syf.papermanager.service.FileService;
 import lombok.extern.slf4j.Slf4j;
@@ -29,14 +29,14 @@ public class FileServiceImpl implements FileService {
     @Resource
     PaperMapper paperMapper;
     @Override
-    public String uploadFile(MultipartFile file) throws PaperException {
+    public String uploadFile(MultipartFile file) throws FileUploadException {
         if (file == null || file.isEmpty()) {
-            throw new PaperException("文件上传出错，请检查上传的文件！");
+            throw new FileUploadException("文件上传出错，请检查上传的文件！");
         }
         String fileType = file.getContentType();
         //检查是否是图片
         if (!fileTypes.contains(fileType)){
-            throw new PaperException("文件格式错误！支持支doc、docx和pdf");
+            throw new FileUploadException("文件格式错误！支持支doc、docx和pdf");
         }
         // 判断当前项目路径下是否包含上传文件的路径 不包含则创建
         File fileDir = new File(Constant.FILE_PATH);
@@ -52,7 +52,7 @@ public class FileServiceImpl implements FileService {
         } catch (IOException e) {
             log.error("文件上传异常");
             e.printStackTrace();
-            throw new PaperException(e.getMessage());
+            throw new FileUploadException(e.getMessage());
         }
         // 返回文件存储的绝对路径
         return "/files/" + newFile.getName();

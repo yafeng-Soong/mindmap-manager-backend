@@ -3,7 +3,8 @@ package com.syf.papermanager.controller;
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.enums.ResponseEnums;
 import com.syf.papermanager.exception.MyAuthenticationException;
-import com.syf.papermanager.exception.PaperException;
+import com.syf.papermanager.exception.FileUploadException;
+import com.syf.papermanager.exception.TagException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.IncorrectCredentialsException;
@@ -31,13 +32,20 @@ import java.util.List;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(value = PaperException.class)
-    public ResponseEntity paperExceptionHandler(PaperException e) {
+    @ExceptionHandler(value = FileUploadException.class)
+    public ResponseEntity fileUploadExceptionHandler(FileUploadException e) {
         e.printStackTrace();
         ResponseEntity response = new ResponseEntity();
         response.setCode(ResponseEnums.FILE_UPLOAD_ERROR.getCode());
         response.setMsg(ResponseEnums.FILE_UPLOAD_ERROR.getMsg());
         response.setData(e.getMessage());
+        return response;
+    }
+    @ExceptionHandler(value = TagException.class)
+    public ResponseEntity tagException(TagException e) {
+        ResponseEntity response = new ResponseEntity();
+        response.setErrorResponse();
+        response.setMsg(e.getMessage());
         return response;
     }
     @ExceptionHandler(value = UnknownAccountException.class)

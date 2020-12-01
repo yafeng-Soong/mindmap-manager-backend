@@ -5,7 +5,7 @@ import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.vo.RegisterAndLoginVo;
 import com.syf.papermanager.bean.vo.user.UserResponseVo;
-import com.syf.papermanager.exception.PaperException;
+import com.syf.papermanager.exception.FileUploadException;
 import com.syf.papermanager.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -20,8 +20,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.validation.Valid;
 
 /**
  * @project_name: paper-manager
@@ -57,7 +55,7 @@ public class LoginController extends BaseController {
     @GetMapping("/test")
     @ApiOperation("test")
     public void test() {
-        throw new PaperException("test");
+        throw new FileUploadException("test");
     }
     @GetMapping("/sayHello")
     public String sayHello(){

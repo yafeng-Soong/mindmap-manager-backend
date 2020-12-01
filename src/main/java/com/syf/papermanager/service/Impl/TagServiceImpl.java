@@ -8,6 +8,7 @@ import com.syf.papermanager.bean.enums.OperationType;
 import com.syf.papermanager.bean.vo.tag.*;
 import com.syf.papermanager.bean.entity.Tag;
 import com.syf.papermanager.exception.MyAuthenticationException;
+import com.syf.papermanager.exception.TagException;
 import com.syf.papermanager.mapper.TagMapper;
 import com.syf.papermanager.mapper.ThemeOperationMapper;
 import com.syf.papermanager.service.TagService;
@@ -98,10 +99,14 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return res;
     }
 
+    // TODO 待添加组的权限验证
     @Override
     public int addTag(TagAddVo addVo, Integer userId) {
         Tag tag = new Tag(addVo);
         tag.setCreatorId(userId);
+        Integer order = tagMapper.selectMaxOrder(tag.getFatherId());
+        if (order == null) tag.setInnerOrder(0);
+        else tag.setInnerOrder(order+1);
         tagMapper.insert(tag);
         int tagId = tag.getId();
         ThemeOperation operation = ThemeOperation.builder()
@@ -114,6 +119,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return tagId;
     }
 
+    // TODO 待添加组的权限验证
     @Override
     public int renameTag(TagRenameVo renameVo, Integer userId) {
         Tag tag = new Tag();
@@ -129,9 +135,12 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return themeOperationMapper.insert(operation);
     }
 
+    // TODO 待添加组的权限验证
     @Override
     public int removeTag(TagRemoveOrRePositionVo removeVo, User user) {
         if (!operable(removeVo.getTagId())) return 0;
+        if (tempTag.getFatherId() == 0)
+            throw new TagException("根节点不能被删除");
         Tag tag = new Tag();
         tag.setId(removeVo.getTagId());
         tag.setState(1);
@@ -145,6 +154,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return themeOperationMapper.insert(operation);
     }
 
+    // TODO 待添加组的权限验证
     @Override
     public int changePosition(TagRemoveOrRePositionVo rePositionVo, Integer userId) {
         if (!operable(rePositionVo.getTagId())) return 0;
@@ -161,6 +171,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return themeOperationMapper.insert(operation);
     }
 
+    // TODO 待添加组的权限验证
     @Override
     public int changeOrder(TagReOrderVo reOrderVo, Integer userId) {
         if (!operable(reOrderVo.getMovedTagId())) return 0;
@@ -180,6 +191,28 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
                 .themeId(reOrderVo.getThemeId())
                 .tagId(tempTag.getId())
                 .type(OperationType.MOVE.getCode())
+                .build();
+        return themeOperationMapper.insert(operation);
+    }
+
+    @Override
+    public int reparentTag(TagReparentVo reparentVo, Integer userId) {
+        if (!operable(reparentVo.getTagId())) return 0;
+        Tag father = tagMapper.selectById(reparentVo.getFatherId());
+        if (father == null)
+            throw new TagException("无法移动节点，因为没有对应父节点");
+        Tag tag = new Tag();
+        tag.setId(reparentVo.getTagId());
+        tag.setFatherId(reparentVo.getFatherId());
+        Integer order = tagMapper.selectMaxOrder(tag.getFatherId());
+        if (order == null) tag.setInnerOrder(0);
+        else tag.setInnerOrder(order+1);
+        tagMapper.updateById(tag);
+        ThemeOperation operation = ThemeOperation.builder()
+                .operatorId(userId)
+                .themeId(reparentVo.getThemeId())
+                .tagId(tag.getId())
+                .type(OperationType.REPARENT.getCode())
                 .build();
         return themeOperationMapper.insert(operation);
     }
