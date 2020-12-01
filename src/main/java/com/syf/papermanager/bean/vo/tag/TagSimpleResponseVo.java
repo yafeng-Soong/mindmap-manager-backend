@@ -13,9 +13,10 @@ import org.springframework.beans.BeanUtils;
  */
 @Data
 public class TagSimpleResponseVo {
-    private Integer id;
+    private Integer tagId;
     private String name;
     public TagSimpleResponseVo(Tag source) {
         BeanUtils.copyProperties(source, this);
+        this.tagId = source.getId();
     }
 }

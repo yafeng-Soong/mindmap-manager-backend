@@ -1,6 +1,5 @@
 package com.syf.papermanager.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.syf.papermanager.base.BaseController;
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.Theme;

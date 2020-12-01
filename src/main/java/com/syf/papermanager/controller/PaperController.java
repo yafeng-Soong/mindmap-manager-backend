@@ -5,19 +5,16 @@ import com.syf.papermanager.base.BaseController;
 import com.syf.papermanager.bean.entity.Paper;
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.User;
-import com.syf.papermanager.bean.enums.ResponseEnums;
 import com.syf.papermanager.bean.vo.page.PageResponseVo;
 import com.syf.papermanager.bean.vo.paper.PaperQueryByTagVo;
 import com.syf.papermanager.bean.vo.paper.PaperQueryVo;
 import com.syf.papermanager.bean.vo.paper.PaperSubmitVo;
-import com.syf.papermanager.exception.PaperException;
 import com.syf.papermanager.service.FileService;
 import com.syf.papermanager.service.PaperService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -53,12 +50,8 @@ public class PaperController extends BaseController {
 
     @ApiOperation("返回脑图中某个节点下的论文")
     @PostMapping("/getListByTagId")
-    public ResponseEntity getPageListByTagId(@RequestBody @Validated PaperQueryByTagVo queryByTagVo,
-                                             BindingResult bindingResult) {
+    public ResponseEntity getPageListByTagId(@RequestBody @Validated PaperQueryByTagVo queryByTagVo) {
         ResponseEntity response = new ResponseEntity();
-        if (validateParams(response, bindingResult)) {
-            return response;
-        }
         Page<Paper> res = paperService.selectPageListByTagId(queryByTagVo);
         PageResponseVo<Paper> data = new PageResponseVo<>(res);
         response.setData(data);
@@ -67,12 +60,8 @@ public class PaperController extends BaseController {
 
     @ApiOperation("查询自己上传的论文列表")
     @PostMapping("/getPageList")
-    public ResponseEntity getPageList(@RequestBody @Validated PaperQueryVo paperQueryVo,
-                                      BindingResult bindingResult) {
+    public ResponseEntity getPageList(@RequestBody @Validated PaperQueryVo paperQueryVo) {
         ResponseEntity response = new ResponseEntity();
-        if (validateParams(response, bindingResult)) {
-            return response;
-        }
         Page<Paper> res = paperService.selectPageList(paperQueryVo, getCurrentUser().getId());
         PageResponseVo<Paper> data = new PageResponseVo<>(res);
         response.setData(data);
@@ -81,11 +70,8 @@ public class PaperController extends BaseController {
 
     @ApiOperation("论文上传接口")
     @PostMapping("/submit")
-    public ResponseEntity submit(@RequestBody @Validated PaperSubmitVo paperSubmitVo, BindingResult bindingResult) {
+    public ResponseEntity submit(@RequestBody @Validated PaperSubmitVo paperSubmitVo) {
         ResponseEntity response = new ResponseEntity();
-        if (validateParams(response, bindingResult)) {
-            return response;
-        }
         User currentUser = getCurrentUser();
         int paperId = paperService.insertPaper(paperSubmitVo, currentUser.getId());
         response.setData(paperId);

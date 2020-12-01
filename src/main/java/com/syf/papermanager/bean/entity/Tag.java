@@ -19,7 +19,7 @@ import java.util.List;
  * @create_time: 2020/11/15 23:12
  */
 @Data
-public class Tag {
+public class Tag implements Comparable<Tag> {
     @TableId(type = IdType.AUTO)
     private Integer id;
     private Integer creatorId;
@@ -27,6 +27,7 @@ public class Tag {
     private Integer fatherId;
     private Integer themeId;
     private Integer state;
+    private Integer innerOrder;
     private boolean position;
     private Date createTime;
     private Date updateTime;
@@ -36,5 +37,10 @@ public class Tag {
     public Tag(TagAddVo addVo) {
         BeanUtils.copyProperties(addVo, this);
         this.position = addVo.isLeft();
+    }
+
+    @Override
+    public int compareTo(Tag o) {
+        return this.innerOrder - o.innerOrder;
     }
 }

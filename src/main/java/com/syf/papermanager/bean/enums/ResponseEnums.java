@@ -24,6 +24,7 @@ public enum ResponseEnums {
     FILE_UPLOAD_ERROR(302, "文件上传失败"),
     ERROR(400, "操作失败"),
     UNAUTHORIZED(401, "您还未登录"),
+    UNAUTHENTICATED(402, "您权限不够"),
     NOT_FOUND(404, "资源不存在"),
     INNER_ERROR(500, "系统发生异常");
 

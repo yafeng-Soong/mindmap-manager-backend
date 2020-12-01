@@ -9,14 +9,15 @@ import javax.validation.constraints.NotNull;
  * @package: com.syf.papermanager.bean.vo.tag
  * @description:
  * @author: songyafeng
- * @create_time: 2020/11/27 11:20
+ * @create_time: 2020/11/30 21:30
  */
 @Data
-public class TagRenameVo {
+public class TagReOrderVo {
     @NotNull(message = "脑图id不能为空")
     private Integer themeId;
-    @NotNull(message = "节点Id不能为空")
-    private Integer tagId;
-    @NotNull(message = "节点名不能为空")
-    private String name;
+    @NotNull(message = "被移动节点id不能为空")
+    private Integer movedTagId;
+    @NotNull(message = "插入位置id不能为空")
+    private Integer insertTagId;
+    private boolean position;
 }

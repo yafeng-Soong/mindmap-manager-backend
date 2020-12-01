@@ -2,6 +2,8 @@ package com.syf.papermanager.bean.vo.tag;
 
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+
 /**
  * @project_name: paper-manager
  * @package: com.syf.papermanager.bean.vo.tag
@@ -10,7 +12,9 @@ import lombok.Data;
  * @create_time: 2020/11/28 16:40
  */
 @Data
-public class TagRemoveVo {
+public class TagRemoveOrRePositionVo {
+    @NotNull(message = "脑图id不能为空")
     private Integer themeId;
+    @NotNull(message = "节点id不能为空")
     private Integer tagId;
 }

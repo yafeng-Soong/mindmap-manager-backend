@@ -16,7 +16,7 @@ import java.util.List;
  */
 @Data
 public class TagResponseVo {
-    private Integer id;
+    private Integer tagId;
     private Integer creatorId;
     private String name;
     private Integer fatherId;
@@ -27,6 +27,7 @@ public class TagResponseVo {
     private Date updateTime;
     public TagResponseVo(Tag source) {
         BeanUtils.copyProperties(source, this);
+        this.tagId = source.getId();
         this.left = source.isPosition();
     }
 }

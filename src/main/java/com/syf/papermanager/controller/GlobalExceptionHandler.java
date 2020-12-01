@@ -2,14 +2,22 @@ package com.syf.papermanager.controller;
 
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.enums.ResponseEnums;
+import com.syf.papermanager.exception.MyAuthenticationException;
 import com.syf.papermanager.exception.PaperException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.IncorrectCredentialsException;
 import org.apache.shiro.authc.UnknownAccountException;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @project_name: paper-manager
@@ -57,6 +65,28 @@ public class GlobalExceptionHandler {
         ResponseEntity response = new ResponseEntity();
         response.setCode(ResponseEnums.LOGIN_ERROR.getCode());
         response.setMsg(ResponseEnums.LOGIN_ERROR.getMsg());
+        return response;
+    }
+
+    @ExceptionHandler(value = MethodArgumentNotValidException.class)
+    public ResponseEntity argumentNotValidExceptionHandler(MethodArgumentNotValidException e) {
+        ResponseEntity response = new ResponseEntity();
+        response.setCode(ResponseEnums.VALID_ERROR.getCode());
+        response.setMsg(ResponseEnums.VALID_ERROR.getMsg());
+        List<String> data = new ArrayList<>();
+        BindingResult bindingResult = e.getBindingResult();
+        for (ObjectError error : bindingResult.getAllErrors()){
+            data.add(((FieldError)error).getField() + "字段，" + error.getDefaultMessage());
+        }
+        response.setData(data);
+        return response;
+    }
+
+    @ExceptionHandler(value = MyAuthenticationException.class)
+    public ResponseEntity myAuthenticationException(MyAuthenticationException e) {
+        ResponseEntity response = new ResponseEntity();
+        response.setCode(ResponseEnums.UNAUTHENTICATED.getCode());
+        response.setMsg(e.getMessage());
         return response;
     }
 

@@ -3,7 +3,6 @@ package com.syf.papermanager.controller;
 import com.syf.papermanager.base.BaseController;
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.User;
-import com.syf.papermanager.bean.enums.ResponseEnums;
 import com.syf.papermanager.bean.vo.RegisterAndLoginVo;
 import com.syf.papermanager.bean.vo.user.UserResponseVo;
 import com.syf.papermanager.exception.PaperException;
@@ -12,14 +11,10 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.authc.DisabledAccountException;
-import org.apache.shiro.authc.IncorrectCredentialsException;
-import org.apache.shiro.authc.UnknownAccountException;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.subject.Subject;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,11 +39,8 @@ public class LoginController extends BaseController {
 
     @PostMapping("/login")
     @ApiOperation("用户登录")
-    public ResponseEntity login(@RequestBody @Validated RegisterAndLoginVo user, BindingResult bindingResult){
+    public ResponseEntity login(@RequestBody @Validated RegisterAndLoginVo user){
         ResponseEntity response = new ResponseEntity();
-        if (validateParams(response, bindingResult)) {
-            return response;
-        }
         Subject subject = SecurityUtils.getSubject();
         UsernamePasswordToken token = new UsernamePasswordToken(user.getEmail(), user.getPassword());
 

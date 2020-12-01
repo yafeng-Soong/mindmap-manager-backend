@@ -1,11 +1,9 @@
 package com.syf.papermanager.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.syf.papermanager.bean.vo.tag.TagAddVo;
-import com.syf.papermanager.bean.vo.tag.TagRenameVo;
-import com.syf.papermanager.bean.vo.tag.TagResponseVo;
+import com.syf.papermanager.bean.entity.User;
+import com.syf.papermanager.bean.vo.tag.*;
 import com.syf.papermanager.bean.entity.Tag;
-import com.syf.papermanager.bean.vo.tag.TagSimpleResponseVo;
 
 import java.util.List;
 
@@ -20,5 +18,8 @@ public interface TagService extends IService<Tag> {
     List<TagResponseVo> selectTreeByThemeId(Integer themeId);
     List<TagSimpleResponseVo> selectSimpleList(Integer themeId);
     int addTag(TagAddVo addVo, Integer userId);
-    int renameTag(TagRenameVo renameVo);
+    int renameTag(TagRenameVo renameVo, Integer userId);
+    int removeTag(TagRemoveOrRePositionVo removeVo, User user);
+    int changePosition(TagRemoveOrRePositionVo rePositionVo, Integer userId);
+    int changeOrder(TagReOrderVo reOrderVo, Integer userId);
 }
