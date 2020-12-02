@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.syf.papermanager.bean.entity.ThemeOperation;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.enums.OperationType;
+import com.syf.papermanager.bean.enums.TagState;
 import com.syf.papermanager.bean.vo.tag.*;
 import com.syf.papermanager.bean.entity.Tag;
 import com.syf.papermanager.exception.MyAuthenticationException;
@@ -38,30 +39,30 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
      * @return 树形结构的taglist
      */
     @Override
-    public List<TagResponseVo> selectTreeByThemeId(Integer themeId) {
+    public List<TagTreeResponseVo> selectTreeByThemeId(Integer themeId) {
         Set<Integer> tags = new HashSet<>(); // 记录已经访问过的节点id，防止出现环路
-        Queue<TagResponseVo> Q = new LinkedList<>();
-        List<TagResponseVo> res = new ArrayList<>();
+        Queue<TagTreeResponseVo> Q = new LinkedList<>();
+        List<TagTreeResponseVo> res = new ArrayList<>();
         QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("theme_id", themeId);
         queryWrapper.eq("father_id", 0);
-        queryWrapper.eq("state", 0);
+        queryWrapper.eq("state", TagState.NORMAL.getCode());
         Tag tmp = tagMapper.selectOne(queryWrapper);
         if (tmp == null) return res;
-        TagResponseVo root = new TagResponseVo(tmp);
+        TagTreeResponseVo root = new TagTreeResponseVo(tmp);
         Q.add(root);
         while (Q.size() > 0) {
-            TagResponseVo top = Q.poll();
+            TagTreeResponseVo top = Q.poll();
             if (tags.contains(top.getTagId()))
                 break;
             tags.add(top.getTagId());
             queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("father_id", top.getTagId());
-            queryWrapper.eq("state", 0);
+            queryWrapper.eq("state", TagState.NORMAL.getCode());
             List<Tag> children = tagMapper.selectList(queryWrapper);
             Collections.sort(children);
-            List<TagResponseVo> childrenList = children.stream()
-                    .map(source -> new TagResponseVo(source))
+            List<TagTreeResponseVo> childrenList = children.stream()
+                    .map(source -> new TagTreeResponseVo(source))
                     .collect(Collectors.toList());
             top.setChildren(childrenList);
             childrenList.forEach(i -> Q.add(i));
@@ -79,7 +80,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("theme_id", themeId);
         queryWrapper.eq("father_id", 0);
-        queryWrapper.eq("state", 0);
+        queryWrapper.eq("state", TagState.NORMAL.getCode());
         Tag tmp = tagMapper.selectOne(queryWrapper);
         if (tmp == null) return res;
         Q.add(tmp.getId());
@@ -92,18 +93,35 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
             res.add(new TagSimpleResponseVo(tag));
             queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("father_id", top);
-            queryWrapper.eq("state", 0);
+            queryWrapper.eq("state", TagState.NORMAL.getCode());
             List<Tag> tagList = tagMapper.selectList(queryWrapper);
             tagList.forEach(i -> Q.add(i.getId()));
         }
         return res;
     }
 
+    @Override
+    public List<TagSimpleResponseVo> selectRemovedList(Integer themeId) {
+        QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("theme_id", themeId);
+        queryWrapper.eq("state", TagState.REMOVED.getCode());
+        queryWrapper.orderByDesc("update_time");
+        List<Tag> list = tagMapper.selectList(queryWrapper);
+        List<TagSimpleResponseVo> res = list.stream()
+                .map(i -> new TagSimpleResponseVo(i))
+                .collect(Collectors.toList());
+        return res;
+    }
+
     // TODO 待添加组的权限验证
     @Override
     public int addTag(TagAddVo addVo, Integer userId) {
+        Tag father = tagMapper.selectById(addVo.getFatherId());
+        if (father == null)
+            throw new TagException("不存在该父节点");
         Tag tag = new Tag(addVo);
         tag.setCreatorId(userId);
+        tag.setThemeId(father.getThemeId());
         Integer order = tagMapper.selectMaxOrder(tag.getFatherId());
         if (order == null) tag.setInnerOrder(0);
         else tag.setInnerOrder(order+1);
@@ -111,7 +129,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         int tagId = tag.getId();
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(userId)
-                .themeId(addVo.getThemeId())
+                .themeId(father.getThemeId())
                 .tagId(tagId)
                 .type(OperationType.ADD.getCode())
                 .build();
@@ -122,13 +140,14 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     // TODO 待添加组的权限验证
     @Override
     public int renameTag(TagRenameVo renameVo, Integer userId) {
+        if (!operable(renameVo.getTagId())) return 0;
         Tag tag = new Tag();
         tag.setId(renameVo.getTagId());
         tag.setName(renameVo.getName());
         tagMapper.updateById(tag);
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(userId)
-                .themeId(renameVo.getThemeId())
+                .themeId(tempTag.getThemeId())
                 .tagId(tag.getId())
                 .type(OperationType.RENAME.getCode())
                 .build();
@@ -140,14 +159,14 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     public int removeTag(TagRemoveOrRePositionVo removeVo, User user) {
         if (!operable(removeVo.getTagId())) return 0;
         if (tempTag.getFatherId() == 0)
-            throw new TagException("根节点不能被删除");
+            throw new TagException("根节点无法被删除");
         Tag tag = new Tag();
         tag.setId(removeVo.getTagId());
         tag.setState(1);
         tagMapper.updateById(tag);
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(user.getId())
-                .themeId(removeVo.getThemeId())
+                .themeId(tempTag.getThemeId())
                 .tagId(tag.getId())
                 .type(OperationType.REMOVE.getCode())
                 .build();
@@ -164,7 +183,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         tagMapper.updateById(tag);
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(userId)
-                .themeId(rePositionVo.getThemeId())
+                .themeId(tempTag.getThemeId())
                 .tagId(tag.getId())
                 .type(OperationType.MOVE.getCode())
                 .build();
@@ -176,6 +195,10 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     public int changeOrder(TagReOrderVo reOrderVo, Integer userId) {
         if (!operable(reOrderVo.getMovedTagId())) return 0;
         Tag insertTag = tagMapper.selectById(reOrderVo.getInsertTagId());
+        if (insertTag == null)
+            throw new TagException("被交换节点不存在！");
+        if (!tempTag.getThemeId().equals(insertTag.getThemeId()))
+            throw new TagException("两个节点必须在同一张脑图中！");
         Tag tag = new Tag();
         // 互换节点内部顺序
         tag.setId(tempTag.getId());
@@ -188,7 +211,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         tagMapper.updateById(tag);
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(userId)
-                .themeId(reOrderVo.getThemeId())
+                .themeId(tempTag.getThemeId())
                 .tagId(tempTag.getId())
                 .type(OperationType.MOVE.getCode())
                 .build();
@@ -201,6 +224,8 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag father = tagMapper.selectById(reparentVo.getFatherId());
         if (father == null)
             throw new TagException("无法移动节点，因为没有对应父节点");
+        if (!tempTag.getThemeId().equals(father.getThemeId()))
+            throw new TagException("两个节点必须在同一张脑图中！");
         Tag tag = new Tag();
         tag.setId(reparentVo.getTagId());
         tag.setFatherId(reparentVo.getFatherId());
@@ -210,7 +235,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         tagMapper.updateById(tag);
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(userId)
-                .themeId(reparentVo.getThemeId())
+                .themeId(tempTag.getThemeId())
                 .tagId(tag.getId())
                 .type(OperationType.REPARENT.getCode())
                 .build();

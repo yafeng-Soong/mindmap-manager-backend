@@ -15,8 +15,9 @@ import java.util.List;
  * @create_time: 2020/11/17 0:06
  */
 public interface TagService extends IService<Tag> {
-    List<TagResponseVo> selectTreeByThemeId(Integer themeId);
+    List<TagTreeResponseVo> selectTreeByThemeId(Integer themeId);
     List<TagSimpleResponseVo> selectSimpleList(Integer themeId);
+    List<TagSimpleResponseVo> selectRemovedList(Integer themeId);
     int addTag(TagAddVo addVo, Integer userId);
     int renameTag(TagRenameVo renameVo, Integer userId);
     int removeTag(TagRemoveOrRePositionVo removeVo, User user);

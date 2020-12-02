@@ -2,7 +2,9 @@ package com.syf.papermanager.bean.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import lombok.Data;
+import org.springframework.beans.BeanUtils;
 
 import java.util.Date;
 
@@ -19,7 +21,13 @@ public class Theme {
     private Integer id;
     private Integer creatorId;
     private String name;
-    private String Description;
+    private String description;
     private Date createTime;
     private Date updateTime;
+    public Theme() {
+        super();
+    }
+    public Theme(ThemeAddVo addVo) {
+        BeanUtils.copyProperties(addVo, this);
+    }
 }

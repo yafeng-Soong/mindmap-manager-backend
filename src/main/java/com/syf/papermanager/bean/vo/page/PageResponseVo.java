@@ -35,4 +35,12 @@ public class PageResponseVo<T> {
         total = page.getTotal();
         pages = page.getPages();
     }
+
+    public PageResponseVo(Page page, List<T> data) {
+        this.data = data;
+        currentPage = page.getCurrent();
+        pageSize = page.getSize();
+        total = page.getTotal();
+        pages = page.getPages();
+    }
 }

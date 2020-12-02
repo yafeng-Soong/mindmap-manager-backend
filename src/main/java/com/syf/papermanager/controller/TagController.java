@@ -32,7 +32,7 @@ public class TagController extends BaseController {
     @GetMapping("/getTree")
     public ResponseEntity getTree(int themeId) {
         ResponseEntity response = new ResponseEntity();
-        List<TagResponseVo> res = tagService.selectTreeByThemeId(themeId);
+        List<TagTreeResponseVo> res = tagService.selectTreeByThemeId(themeId);
         response.setData(res);
         return response;
     }
@@ -42,6 +42,15 @@ public class TagController extends BaseController {
     public ResponseEntity getSimpleList(int themeId) {
         ResponseEntity response = new ResponseEntity();
         List<TagSimpleResponseVo> res = tagService.selectSimpleList(themeId);
+        response.setData(res);
+        return response;
+    }
+
+    @ApiOperation("获取一个脑图中被删除的节点列表")
+    @GetMapping("/getRemovedList")
+    public ResponseEntity getRemovedList(int themeId) {
+        ResponseEntity response = new ResponseEntity();
+        List<TagSimpleResponseVo> res = tagService.selectRemovedList(themeId);
         response.setData(res);
         return response;
     }

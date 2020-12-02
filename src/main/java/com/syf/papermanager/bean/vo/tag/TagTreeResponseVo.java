@@ -15,17 +15,17 @@ import java.util.List;
  * @create_time: 2020/11/17 0:42
  */
 @Data
-public class TagResponseVo {
+public class TagTreeResponseVo {
     private Integer tagId;
     private Integer creatorId;
     private String name;
     private Integer fatherId;
     private Integer themeId;
     private boolean left;
-    private List<TagResponseVo> children;
+    private List<TagTreeResponseVo> children;
     private Date createTime;
     private Date updateTime;
-    public TagResponseVo(Tag source) {
+    public TagTreeResponseVo(Tag source) {
         BeanUtils.copyProperties(source, this);
         this.tagId = source.getId();
         this.left = source.isPosition();

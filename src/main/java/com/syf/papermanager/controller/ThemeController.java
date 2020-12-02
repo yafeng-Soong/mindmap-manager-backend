@@ -1,18 +1,21 @@
 package com.syf.papermanager.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.syf.papermanager.base.BaseController;
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.Theme;
 import com.syf.papermanager.bean.entity.User;
+import com.syf.papermanager.bean.vo.page.PageResponseVo;
+import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
+import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
 import com.syf.papermanager.bean.vo.theme.ThemeResponseVo;
 import com.syf.papermanager.service.ThemeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -47,6 +50,34 @@ public class ThemeController extends BaseController {
                     return target;
                 }).collect(Collectors.toList());
         response.setData(res);
+        return response;
+    }
+
+    @ApiOperation("查询分页数据")
+    @PostMapping("/getPageList")
+    public ResponseEntity getPageList(@RequestBody @Validated ThemeQueryVo queryVo) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        Page<Theme> res = themeService.selectPageList(queryVo, currentUser.getId());
+        List<ThemeResponseVo> list = res.getRecords().stream()
+                .map(source -> {
+                    ThemeResponseVo target = new ThemeResponseVo();
+                    BeanUtils.copyProperties(source, target);
+                    target.setCreator(currentUser.getUsername());
+                    return target;
+                }).collect(Collectors.toList());
+        PageResponseVo<ThemeResponseVo> data = new PageResponseVo<>(res, list);
+        response.setData(data);
+        return response;
+    }
+
+    @ApiOperation("新增脑图接口")
+    @PutMapping("/add")
+    public ResponseEntity addTheme(@RequestBody @Validated ThemeAddVo addVo) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        themeService.addTheme(addVo, currentUser.getId());
+        response.setData("新增脑图成功");
         return response;
     }
 }

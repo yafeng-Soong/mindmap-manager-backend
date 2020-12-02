@@ -13,8 +13,8 @@ import javax.validation.constraints.NotNull;
  */
 @Data
 public class TagRenameVo {
-    @NotNull(message = "脑图id不能为空")
-    private Integer themeId;
+//    @NotNull(message = "脑图id不能为空")
+//    private Integer themeId;
     @NotNull(message = "节点Id不能为空")
     private Integer tagId;
     @NotNull(message = "节点名不能为空")
