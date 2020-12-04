@@ -3,7 +3,11 @@ package com.syf.papermanager.controller;
 import com.syf.papermanager.base.BaseController;
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.User;
-import com.syf.papermanager.bean.vo.tag.*;
+import com.syf.papermanager.bean.vo.tag.request.*;
+import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
+import com.syf.papermanager.bean.vo.tag.response.TagRemovedVo;
+import com.syf.papermanager.bean.vo.tag.response.TagSimpleResponseVo;
+import com.syf.papermanager.bean.vo.tag.response.TagTreeResponseVo;
 import com.syf.papermanager.service.TagService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -50,7 +54,16 @@ public class TagController extends BaseController {
     @GetMapping("/getRemovedList")
     public ResponseEntity getRemovedList(int themeId) {
         ResponseEntity response = new ResponseEntity();
-        List<TagSimpleResponseVo> res = tagService.selectRemovedList(themeId);
+        List<TagRemovedVo> res = tagService.selectRemovedList(themeId);
+        response.setData(res);
+        return response;
+    }
+
+    @ApiOperation("获取脑图最近10条操作")
+    @GetMapping("/getRecentOperations")
+    public ResponseEntity getRecentOperations(int themeId) {
+        ResponseEntity response = new ResponseEntity();
+        List<TagOperationVo> res = tagService.selectOperations(themeId);
         response.setData(res);
         return response;
     }
@@ -113,5 +126,15 @@ public class TagController extends BaseController {
        tagService.reparentTag(reparentVo, currentUser.getId());
        response.setData("改变位置成功");
        return response;
+    }
+
+    @ApiOperation("从回收站恢复节点")
+    @GetMapping("/recover")
+    public ResponseEntity recoverTag(int tagId) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        tagService.recoverTag(tagId, currentUser.getId());
+        response.setData("恢复成功");
+        return response;
     }
 }

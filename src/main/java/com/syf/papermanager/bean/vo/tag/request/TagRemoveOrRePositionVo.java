@@ -1,4 +1,4 @@
-package com.syf.papermanager.bean.vo.tag;
+package com.syf.papermanager.bean.vo.tag.request;
 
 import lombok.Data;
 

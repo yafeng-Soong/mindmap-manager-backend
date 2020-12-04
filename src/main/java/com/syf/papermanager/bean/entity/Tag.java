@@ -4,12 +4,11 @@ package com.syf.papermanager.bean.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.syf.papermanager.bean.vo.tag.TagAddVo;
+import com.syf.papermanager.bean.vo.tag.request.TagAddVo;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
 import java.util.Date;
-import java.util.List;
 
 /**
  * @project_name: paper-manager

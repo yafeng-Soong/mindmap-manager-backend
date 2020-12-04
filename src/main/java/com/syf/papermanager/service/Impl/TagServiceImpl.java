@@ -1,13 +1,19 @@
 package com.syf.papermanager.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.syf.papermanager.bean.dto.TagOperationDTO;
 import com.syf.papermanager.bean.entity.ThemeOperation;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.enums.OperationType;
 import com.syf.papermanager.bean.enums.TagState;
-import com.syf.papermanager.bean.vo.tag.*;
 import com.syf.papermanager.bean.entity.Tag;
+import com.syf.papermanager.bean.vo.tag.request.*;
+import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
+import com.syf.papermanager.bean.vo.tag.response.TagRemovedVo;
+import com.syf.papermanager.bean.vo.tag.response.TagSimpleResponseVo;
+import com.syf.papermanager.bean.vo.tag.response.TagTreeResponseVo;
 import com.syf.papermanager.exception.MyAuthenticationException;
 import com.syf.papermanager.exception.TagException;
 import com.syf.papermanager.mapper.TagMapper;
@@ -101,14 +107,19 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     }
 
     @Override
-    public List<TagSimpleResponseVo> selectRemovedList(Integer themeId) {
-        QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("theme_id", themeId);
-        queryWrapper.eq("state", TagState.REMOVED.getCode());
-        queryWrapper.orderByDesc("update_time");
-        List<Tag> list = tagMapper.selectList(queryWrapper);
-        List<TagSimpleResponseVo> res = list.stream()
-                .map(i -> new TagSimpleResponseVo(i))
+    public List<TagRemovedVo> selectRemovedList(Integer themeId) {
+        List<TagOperationDTO> list = themeOperationMapper.selectRemovedTag(themeId, TagState.REMOVED.getCode());
+        List<TagRemovedVo> res = list.stream()
+                .map(i -> new TagRemovedVo(i))
+                .collect(Collectors.toList());
+        return res;
+    }
+
+    @Override
+    public List<TagOperationVo> selectOperations(Integer themeId) {
+        List<TagOperationDTO> list = themeOperationMapper.selectOperations(themeId);
+        List<TagOperationVo> res = list.stream()
+                .map(i -> new TagOperationVo(i))
                 .collect(Collectors.toList());
         return res;
     }
@@ -127,13 +138,13 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         else tag.setInnerOrder(order+1);
         tagMapper.insert(tag);
         int tagId = tag.getId();
-        ThemeOperation operation = ThemeOperation.builder()
-                .operatorId(userId)
-                .themeId(father.getThemeId())
-                .tagId(tagId)
-                .type(OperationType.ADD.getCode())
-                .build();
-        themeOperationMapper.insert(operation);
+//        ThemeOperation operation = ThemeOperation.builder()
+//                .operatorId(userId)
+//                .themeId(father.getThemeId())
+//                .tagId(tagId)
+//                .type(OperationType.ADD.getCode())
+//                .build();
+//        themeOperationMapper.insert(operation);
         return tagId;
     }
 
@@ -145,7 +156,17 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         tag.setId(renameVo.getTagId());
         tag.setName(renameVo.getName());
         tagMapper.updateById(tag);
-        ThemeOperation operation = ThemeOperation.builder()
+        ThemeOperation operation;
+        // 若之前名字为空，则是新增节点操作（前端新增节点默认名字为空）
+        if (StringUtils.isBlank(tempTag.getName()))
+            operation = ThemeOperation.builder()
+                    .operatorId(userId)
+                    .themeId(tempTag.getThemeId())
+                    .tagId(tag.getId())
+                    .type(OperationType.ADD.getCode())
+                    .build();
+        else
+            operation = ThemeOperation.builder()
                 .operatorId(userId)
                 .themeId(tempTag.getThemeId())
                 .tagId(tag.getId())
@@ -240,6 +261,15 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
                 .type(OperationType.REPARENT.getCode())
                 .build();
         return themeOperationMapper.insert(operation);
+    }
+
+    @Override
+    public int recoverTag(Integer tagId, Integer userId) {
+        Tag temp = tagMapper.selectById(tagId);
+        if (!temp.getState().equals(TagState.REMOVED.getCode()))
+            throw new TagException("只能恢复被删除节点");
+        temp.setState(TagState.NORMAL.getCode());
+        return tagMapper.updateById(temp);
     }
 
     private boolean operable(Integer tagId) {

@@ -12,6 +12,5 @@ import org.apache.ibatis.annotations.Select;
  * @create_time: 2020/11/17 0:05
  */
 public interface TagMapper extends BaseMapper<Tag> {
-    @Select("SELECT MAX(inner_order) FROM tag WHERE father_id = #{fatherId}")
     Integer selectMaxOrder(Integer fatherId);
 }

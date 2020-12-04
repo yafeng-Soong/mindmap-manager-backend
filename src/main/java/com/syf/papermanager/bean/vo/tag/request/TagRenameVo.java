@@ -1,4 +1,4 @@
-package com.syf.papermanager.bean.vo.tag;
+package com.syf.papermanager.bean.vo.tag.request;
 
 import lombok.Data;
 
@@ -9,14 +9,14 @@ import javax.validation.constraints.NotNull;
  * @package: com.syf.papermanager.bean.vo.tag
  * @description:
  * @author: songyafeng
- * @create_time: 2020/12/1 9:47
+ * @create_time: 2020/11/27 11:20
  */
 @Data
-public class TagReparentVo {
+public class TagRenameVo {
 //    @NotNull(message = "脑图id不能为空")
 //    private Integer themeId;
-    @NotNull(message = "父亲节点id不能为空")
-    private Integer fatherId;
-    @NotNull(message = "节点id不能为空")
+    @NotNull(message = "节点Id不能为空")
     private Integer tagId;
+    @NotNull(message = "节点名不能为空")
+    private String name;
 }
