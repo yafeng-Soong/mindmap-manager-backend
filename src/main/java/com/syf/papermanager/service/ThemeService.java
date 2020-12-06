@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.syf.papermanager.bean.entity.Theme;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
+import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
 
 import java.util.List;
 
@@ -19,4 +20,5 @@ public interface ThemeService extends IService<Theme> {
     List<Theme> selectList(Integer creatorId);
     Page<Theme> selectPageList(ThemeQueryVo queryVo, Integer userId);
     int addTheme(ThemeAddVo addVo, Integer userId);
+    int updateTheme(ThemeUpdateVo updateVo, Integer userId);
 }

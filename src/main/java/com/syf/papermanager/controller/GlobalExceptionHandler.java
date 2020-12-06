@@ -5,6 +5,7 @@ import com.syf.papermanager.bean.enums.ResponseEnums;
 import com.syf.papermanager.exception.MyAuthenticationException;
 import com.syf.papermanager.exception.FileUploadException;
 import com.syf.papermanager.exception.TagException;
+import com.syf.papermanager.exception.ThemeException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.IncorrectCredentialsException;
@@ -43,6 +44,13 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(value = TagException.class)
     public ResponseEntity tagException(TagException e) {
+        ResponseEntity response = new ResponseEntity();
+        response.setErrorResponse();
+        response.setMsg(e.getMessage());
+        return response;
+    }
+    @ExceptionHandler(value = ThemeException.class)
+    public ResponseEntity themeException(ThemeException e) {
         ResponseEntity response = new ResponseEntity();
         response.setErrorResponse();
         response.setMsg(e.getMessage());

@@ -9,6 +9,7 @@ import com.syf.papermanager.bean.vo.page.PageResponseVo;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
 import com.syf.papermanager.bean.vo.theme.ThemeResponseVo;
+import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
 import com.syf.papermanager.service.ThemeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -78,6 +79,16 @@ public class ThemeController extends BaseController {
         User currentUser = getCurrentUser();
         themeService.addTheme(addVo, currentUser.getId());
         response.setData("新增脑图成功");
+        return response;
+    }
+
+    @ApiOperation("更新脑图信息接口")
+    @PostMapping("/update")
+    public ResponseEntity updateTheme(@RequestBody @Validated ThemeUpdateVo updateVo) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        themeService.updateTheme(updateVo, currentUser.getId());
+        response.setData("更新脑图信息成功");
         return response;
     }
 }
