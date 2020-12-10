@@ -12,11 +12,13 @@ import com.syf.papermanager.bean.vo.theme.ThemeResponseVo;
 import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
 import com.syf.papermanager.service.ThemeService;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -89,6 +91,19 @@ public class ThemeController extends BaseController {
         User currentUser = getCurrentUser();
         themeService.updateTheme(updateVo, currentUser.getId());
         response.setData("更新脑图信息成功");
+        return response;
+    }
+
+    @ApiOperation("更新文件接口")
+    @ApiImplicitParam(name = "file", value = "文件", required = true)
+    @PostMapping("/importXmindFile")
+    public ResponseEntity importXmind(@RequestParam(value = "file") MultipartFile file,
+                                      @RequestParam(value = "name") String themeName,
+                                      @RequestParam(value = "description", required = false) String description) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        themeService.createFromXmind(file, themeName, description,currentUser.getId());
+        response.setData("导入成功！");
         return response;
     }
 }

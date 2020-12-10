@@ -6,6 +6,7 @@ import com.syf.papermanager.bean.entity.Theme;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
 import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -21,4 +22,5 @@ public interface ThemeService extends IService<Theme> {
     Page<Theme> selectPageList(ThemeQueryVo queryVo, Integer userId);
     int addTheme(ThemeAddVo addVo, Integer userId);
     int updateTheme(ThemeUpdateVo updateVo, Integer userId);
+    int createFromXmind(MultipartFile file, String themeName, String description,Integer userId) throws RuntimeException;
 }

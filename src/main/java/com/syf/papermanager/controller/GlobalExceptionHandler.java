@@ -112,7 +112,7 @@ public class GlobalExceptionHandler {
         e.printStackTrace();
         ResponseEntity response = new ResponseEntity();
         response.setErrorResponse();
-        response.setData("服务器异常");
+        response.setMsg("服务器异常");
         return  response;
     }
 }
