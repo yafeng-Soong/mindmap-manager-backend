@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.syf.papermanager.bean.entity.Tag;
 import com.syf.papermanager.bean.entity.Theme;
+import com.syf.papermanager.bean.enums.ThemeState;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
 import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
@@ -24,7 +25,6 @@ import org.xmind.core.*;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -48,6 +48,7 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     public List<Theme> selectList(Integer creatorId) {
         QueryWrapper<Theme> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("creator_id", creatorId);
+        queryWrapper.eq("state", ThemeState.NORMAL.getCode());
         return themeMapper.selectList(queryWrapper);
     }
 
@@ -57,6 +58,9 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
         theme.setCreatorId(userId);
         QueryWrapper<Theme> queryWrapper = new QueryWrapper<>(theme);
         queryWrapper.like(StringUtils.isNotBlank(queryVo.getName()), "name", queryVo.getName());
+        if (queryVo.isRemoved())
+            queryWrapper.eq("state", ThemeState.REMOVED.getCode());
+        else queryWrapper.eq("state", ThemeState.NORMAL.getCode());
         queryWrapper.orderByDesc("update_time");
         Page<Theme> page = new Page<>(queryVo.getCurrentPage(), queryVo.getPageSize());
         return themeMapper.selectPage(page, queryWrapper);
@@ -174,4 +178,18 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
         }
         return themeId;
     }
+
+    @Override
+    public int updateThemeState(Integer themeId, Integer userId, Integer stateCode) {
+        Theme tmp = themeMapper.selectById(themeId);
+        if (tmp == null)
+            throw new ThemeException("脑图不存在");
+        if (!tmp.getCreatorId().equals(userId))
+            throw new ThemeException("您没有操作权限");
+        Theme theme = new Theme();
+        theme.setId(themeId);
+        theme.setState(stateCode);
+        return themeMapper.updateById(theme);
+    }
+
 }

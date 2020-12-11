@@ -22,6 +22,7 @@ public class Theme {
     private Integer creatorId;
     private String name;
     private String description;
+    private Integer state;
     private Date createTime;
     private Date updateTime;
     public Theme() {

@@ -13,4 +13,5 @@ import lombok.Data;
 @Data
 public class ThemeQueryVo extends PageQueryVo {
     private String name;
+    private boolean removed;
 }

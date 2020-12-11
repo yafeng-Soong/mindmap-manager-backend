@@ -23,4 +23,5 @@ public interface ThemeService extends IService<Theme> {
     int addTheme(ThemeAddVo addVo, Integer userId);
     int updateTheme(ThemeUpdateVo updateVo, Integer userId);
     int createFromXmind(MultipartFile file, String themeName, String description,Integer userId) throws RuntimeException;
+    int updateThemeState(Integer themeId, Integer userId, Integer stateCode);
 }

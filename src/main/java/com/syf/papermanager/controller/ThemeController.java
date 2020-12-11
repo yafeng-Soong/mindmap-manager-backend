@@ -5,6 +5,7 @@ import com.syf.papermanager.base.BaseController;
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.Theme;
 import com.syf.papermanager.bean.entity.User;
+import com.syf.papermanager.bean.enums.ThemeState;
 import com.syf.papermanager.bean.vo.page.PageResponseVo;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
@@ -104,6 +105,28 @@ public class ThemeController extends BaseController {
         User currentUser = getCurrentUser();
         themeService.createFromXmind(file, themeName, description,currentUser.getId());
         response.setData("导入成功！");
+        return response;
+    }
+
+    @ApiOperation("删除脑图接口（到回收站）")
+    @DeleteMapping("/remove")
+    public ResponseEntity removeTheme(@RequestParam(value = "themeId") Integer themeId) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        Integer removeCode = ThemeState.REMOVED.getCode();
+        themeService.updateThemeState(themeId, currentUser.getId(), removeCode);
+        response.setData("删除成功!");
+        return response;
+    }
+
+    @ApiOperation("恢复回收站中的脑图")
+    @GetMapping("/recover")
+    public ResponseEntity recoverTheme(@RequestParam(value = "themeId") Integer themeId) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        Integer normalCode = ThemeState.NORMAL.getCode();
+        themeService.updateThemeState(themeId, currentUser.getId(), normalCode);
+        response.setData("恢复成功!");
         return response;
     }
 }
