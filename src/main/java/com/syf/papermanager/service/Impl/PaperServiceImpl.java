@@ -17,6 +17,7 @@ import com.syf.papermanager.mapper.TagMapper;
 import com.syf.papermanager.service.PaperService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.*;
@@ -132,6 +133,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
     }
 
     @Override
+    @Transactional
     public int insertPaper(PaperSubmitVo submitVo, int userId) {
         Paper paper = new Paper();
         BeanUtils.copyProperties(submitVo, paper);

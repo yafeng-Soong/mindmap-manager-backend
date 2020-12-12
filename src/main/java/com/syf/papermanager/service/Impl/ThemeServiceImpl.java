@@ -4,18 +4,24 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.syf.papermanager.bean.entity.PaperTag;
 import com.syf.papermanager.bean.entity.Tag;
 import com.syf.papermanager.bean.entity.Theme;
+import com.syf.papermanager.bean.enums.TagState;
 import com.syf.papermanager.bean.enums.ThemeState;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
+import com.syf.papermanager.bean.vo.theme.ThemeCombineVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
 import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
 import com.syf.papermanager.exception.FileUploadException;
+import com.syf.papermanager.exception.MyAuthenticationException;
 import com.syf.papermanager.exception.ThemeException;
+import com.syf.papermanager.mapper.PaperTagMapper;
 import com.syf.papermanager.mapper.TagMapper;
 import com.syf.papermanager.mapper.ThemeMapper;
 import com.syf.papermanager.service.ThemeService;
 import com.syf.papermanager.utils.MyIterables;
+import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,11 +50,14 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     ThemeMapper themeMapper;
     @Resource
     TagMapper tagMapper;
+    @Resource
+    PaperTagMapper paperTagMapper;
     @Override
-    public List<Theme> selectList(Integer creatorId) {
+    public List<Theme> selectList(Integer creatorId, Integer selfId) {
         QueryWrapper<Theme> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("creator_id", creatorId);
         queryWrapper.eq("state", ThemeState.NORMAL.getCode());
+        queryWrapper.ne(selfId != null, "id", selfId);
         return themeMapper.selectList(queryWrapper);
     }
 
@@ -82,6 +91,7 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
 
     @Override
     public int updateTheme(ThemeUpdateVo updateVo, Integer userId) {
+        themeOperable(updateVo.getId(), userId);
         String name = updateVo.getName();
         String description = updateVo.getDescription();
         Theme theme = new Theme();
@@ -181,15 +191,68 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
 
     @Override
     public int updateThemeState(Integer themeId, Integer userId, Integer stateCode) {
-        Theme tmp = themeMapper.selectById(themeId);
-        if (tmp == null)
-            throw new ThemeException("脑图不存在");
-        if (!tmp.getCreatorId().equals(userId))
-            throw new ThemeException("您没有操作权限");
+        themeOperable(themeId, userId);
         Theme theme = new Theme();
         theme.setId(themeId);
         theme.setState(stateCode);
         return themeMapper.updateById(theme);
     }
 
+    @Override
+    @Transactional
+    public void combineTheme(ThemeCombineVo combineVo, Integer userId) {
+        int themeId = combineVo.getFromThemeId();
+        int toTagId = combineVo.getToTagId();
+        themeOperable(themeId, userId);
+        Tag toTag = tagOperable(toTagId, userId);
+        if (toTag.getThemeId() == themeId)
+            throw new ThemeException("不能合并到自己");
+        boolean position = toTag.isPosition();
+        int toThemeId = toTag.getThemeId();
+        Queue<Pair<Integer, Integer>> QS = new LinkedList<>(); // 记录原始节点id
+        QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("theme_id", themeId);
+        queryWrapper.eq("father_id", 0);
+        queryWrapper.eq("state", TagState.NORMAL.getCode());
+        Tag tmp = tagMapper.selectOne(queryWrapper);
+        if (tmp == null)
+            throw new ThemeException("源脑图没有节点");
+        // 用pair来记录节点信息，k保存原始id，v保存新的fatherId
+        QS.add(new Pair<>(tmp.getId(), toTagId));
+        while (QS.size() > 0) {
+            Pair<Integer, Integer> top = QS.poll();
+            Tag source = tagMapper.selectById(top.getKey());
+            Tag tag = new Tag(source);
+            tag.setThemeId(toThemeId);
+            tag.setFatherId(top.getValue());
+            tag.setPosition(position);
+            tagMapper.insert(tag);
+            // 将与脑图关联的paper记录也新建一遍
+            List<PaperTag> paperTags = paperTagMapper.selectByTagId(top.getKey());
+            paperTags.forEach(i -> {
+                i.setTagId(tag.getId());
+                paperTagMapper.insert(i);
+            });
+            List<Integer> childrenIds = tagMapper.selectChildrenIds(top.getKey());
+            childrenIds.forEach(i -> QS.add(new Pair<>(i,tag.getId())));
+        }
+    }
+
+    private void themeOperable(Integer themeId, Integer userId) {
+        Theme tmpTheme = themeMapper.selectById(themeId);
+        if (tmpTheme == null)
+            throw new ThemeException("脑图不存在");
+        if (!tmpTheme.getCreatorId().equals(userId))
+            throw new MyAuthenticationException("您没有操作该脑图权限");
+    }
+
+    private Tag tagOperable(Integer tagId, Integer userId) {
+        Tag tmp = tagMapper.selectById(tagId);
+        if (tmp == null)
+            throw new ThemeException("新的父节点不存在");
+        Theme newTheme = themeMapper.selectById(tmp.getThemeId());
+        if (!newTheme.getCreatorId().equals(userId))
+            throw new MyAuthenticationException("您没有合并权限");
+        return tmp;
+    }
 }

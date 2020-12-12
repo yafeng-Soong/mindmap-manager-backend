@@ -7,10 +7,7 @@ import com.syf.papermanager.bean.entity.Theme;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.enums.ThemeState;
 import com.syf.papermanager.bean.vo.page.PageResponseVo;
-import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
-import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
-import com.syf.papermanager.bean.vo.theme.ThemeResponseVo;
-import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
+import com.syf.papermanager.bean.vo.theme.*;
 import com.syf.papermanager.service.ThemeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -42,10 +39,10 @@ public class ThemeController extends BaseController {
 
     @ApiOperation("查询测试接口")
     @GetMapping("/getList")
-    public ResponseEntity getList() {
+    public ResponseEntity getList(@RequestParam(value = "selfId", required = false) Integer selfId) {
         ResponseEntity response = new ResponseEntity();
         User currentUser = getCurrentUser();
-        List<Theme> list = themeService.selectList(currentUser.getId());
+        List<Theme> list = themeService.selectList(currentUser.getId(), selfId);
         List<ThemeResponseVo> res = list.stream()
                 .map(source -> {
                     ThemeResponseVo target = new ThemeResponseVo();
@@ -127,6 +124,16 @@ public class ThemeController extends BaseController {
         Integer normalCode = ThemeState.NORMAL.getCode();
         themeService.updateThemeState(themeId, currentUser.getId(), normalCode);
         response.setData("恢复成功!");
+        return response;
+    }
+
+    @ApiOperation("合并脑图")
+    @PostMapping("/combine")
+    public ResponseEntity combineTheme(@RequestBody @Validated ThemeCombineVo combineVo) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        themeService.combineTheme(combineVo, currentUser.getId());
+        response.setData("合并成功！");
         return response;
     }
 }

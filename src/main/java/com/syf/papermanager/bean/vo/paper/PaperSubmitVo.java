@@ -19,11 +19,8 @@ import java.util.List;
 public class PaperSubmitVo {
     @NotNull(message = "论文名称不能为空")
     private String name;
-    @NotNull(message = "作者不能为空")
     private String author;
-    @NotNull(message = "关键字不能为空")
     private String keyword;
-    @NotNull(message = "论文摘要不能为空")
     private String abstracts;
     private String summary;
     @NotNull(message = "发表年份不能为空")

@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
  */
 @Service
 public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagService {
-    private Tag tempTag;
     @Resource
     TagMapper tagMapper;
     @Resource
@@ -151,7 +150,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     // TODO 待添加组的权限验证
     @Override
     public int renameTag(TagRenameVo renameVo, Integer userId) {
-        if (!operable(renameVo.getTagId())) return 0;
+        Tag tempTag = operable(renameVo.getTagId());
         Tag tag = new Tag();
         tag.setId(renameVo.getTagId());
         tag.setName(renameVo.getName());
@@ -178,7 +177,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     // TODO 待添加组的权限验证
     @Override
     public int removeTag(TagRemoveOrRePositionVo removeVo, User user) {
-        if (!operable(removeVo.getTagId())) return 0;
+        Tag tempTag = operable(removeVo.getTagId());
         if (tempTag.getFatherId() == 0)
             throw new TagException("根节点无法被删除");
         Tag tag = new Tag();
@@ -197,7 +196,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     // TODO 待添加组的权限验证
     @Override
     public int changePosition(TagRemoveOrRePositionVo rePositionVo, Integer userId) {
-        if (!operable(rePositionVo.getTagId())) return 0;
+        Tag tempTag = operable(rePositionVo.getTagId());
         Tag tag = new Tag();
         tag.setId(rePositionVo.getTagId());
         tag.setPosition(!tempTag.isPosition());
@@ -214,7 +213,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     // TODO 待添加组的权限验证
     @Override
     public int changeOrder(TagReOrderVo reOrderVo, Integer userId) {
-        if (!operable(reOrderVo.getMovedTagId())) return 0;
+        Tag tempTag = operable(reOrderVo.getMovedTagId());
         Tag insertTag = tagMapper.selectById(reOrderVo.getInsertTagId());
         if (insertTag == null)
             throw new TagException("被交换节点不存在！");
@@ -241,7 +240,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
     @Override
     public int reparentTag(TagReparentVo reparentVo, Integer userId) {
-        if (!operable(reparentVo.getTagId())) return 0;
+        Tag tempTag = operable(reparentVo.getTagId());
         Tag father = tagMapper.selectById(reparentVo.getFatherId());
         if (father == null)
             throw new TagException("无法移动节点，因为没有对应父节点");
@@ -272,12 +271,14 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return tagMapper.updateById(temp);
     }
 
-    private boolean operable(Integer tagId) {
-        tempTag = tagMapper.selectById(tagId);
+    private Tag operable(Integer tagId) {
+        Tag tempTag = tagMapper.selectById(tagId);
         if (tempTag.getState() == 2)
             throw new MyAuthenticationException("节点已被锁定，无法操作");
-        if (tempTag == null || tempTag.getState() != 0)
-            return false;
-        else return true;
+        if (tempTag == null)
+            throw new TagException("被操作节点不存在");
+        if (tempTag.getState() != 0)
+            throw new TagException("节点不可操作");
+        return tempTag;
     }
 }

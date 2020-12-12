@@ -4,4 +4,7 @@
     <select id="selectMaxOrder" parameterType="java.lang.Integer" resultType="java.lang.Integer">
         SELECT MAX(inner_order) FROM tag WHERE father_id = #{fatherId}
     </select>
+    <select id="selectChildrenIds" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT id FROM tag WHERE father_id = #{fatherId} and state = 0
+    </select>
 </mapper>

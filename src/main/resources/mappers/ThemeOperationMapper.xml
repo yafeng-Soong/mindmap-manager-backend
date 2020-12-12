@@ -9,7 +9,7 @@
                 FROM theme_operation op INNER JOIN tag t
                 ON op.tag_id = t.id
                 WHERE op.theme_id = #{themeId} and t.state = #{state} and op.type = 2
-                ORDER BY op.create_time DESC LIMIT 1
+                ORDER BY op.create_time DESC LIMIT 10
             ) b
         ON u.id = b.operator_id ORDER BY b.create_time DESC
     </select>

@@ -37,6 +37,14 @@ public class Tag implements Comparable<Tag> {
         BeanUtils.copyProperties(addVo, this);
         this.position = addVo.isLeft();
     }
+    public Tag(Tag source) {
+        this.creatorId = source.getCreatorId();
+        this.name = source.getName();
+        this.state = source.getState();
+        this.innerOrder = source.getInnerOrder();
+        this.createTime = source.getCreateTime();
+        this.updateTime = source.getUpdateTime();
+    }
 
     @Override
     public int compareTo(Tag o) {
