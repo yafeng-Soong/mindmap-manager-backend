@@ -8,12 +8,16 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.syf.papermanager.bean.entity.Paper;
 import com.syf.papermanager.bean.entity.PaperTag;
 import com.syf.papermanager.bean.entity.Tag;
+import com.syf.papermanager.bean.vo.paper.PaperDeleteVo;
 import com.syf.papermanager.bean.vo.paper.PaperQueryByTagVo;
 import com.syf.papermanager.bean.vo.paper.PaperQueryVo;
 import com.syf.papermanager.bean.vo.paper.PaperSubmitVo;
+import com.syf.papermanager.exception.MyAuthenticationException;
+import com.syf.papermanager.exception.PaperException;
 import com.syf.papermanager.mapper.PaperMapper;
 import com.syf.papermanager.mapper.PaperTagMapper;
 import com.syf.papermanager.mapper.TagMapper;
+import com.syf.papermanager.service.FileService;
 import com.syf.papermanager.service.PaperService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -37,6 +41,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
     PaperMapper paperMapper;
     @Resource
     PaperTagMapper paperTagMapper;
+    @Resource
+    FileService fileService;
 
     @Override
     public List<Paper> selectByTagId(int tagId) {
@@ -160,6 +166,31 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
     }
 
     @Override
+    public int deletePaper(Integer paperId, Integer userId) {
+        Paper paper = deletable(paperId, userId);
+        fileService.deleteFile(paper.getFilePath());
+        return paperMapper.deleteById(paperId);
+    }
+
+    @Override
+    public int deletePaperFromTheme(PaperDeleteVo deleteVo, Integer userId) {
+        Paper paper = operable(deleteVo.getPaperId(), userId);
+        int associates = paperMapper.selectAssociatedTagNumber(paper.getId());
+        int affect;
+        // 如果关联的节点不止一个，则只删除关联记录本身，否则删除论文本身
+        if (associates > 1) {
+            UpdateWrapper updateWrapper = new UpdateWrapper();
+            updateWrapper.eq("tag_id", deleteVo.getTagId());
+            updateWrapper.eq("paper_id", paper.getId());
+            affect = paperTagMapper.delete(updateWrapper);
+        } else {
+            affect = paperMapper.deleteById(paper.getId());
+            fileService.deleteFile(paper.getFilePath());
+        }
+        return affect;
+    }
+
+    @Override
     public Page<Paper> selectPageList(PaperQueryVo queryVo, Integer userId) {
         Paper paper = new Paper();
         paper.setUploaderId(userId);
@@ -173,6 +204,30 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
         queryWrapper.orderByDesc("update_time");
         Page<Paper> res = paperMapper.selectPage(page, queryWrapper);
         return res;
+    }
+
+    private Paper deletable(Integer paperId, Integer userId) {
+        Paper tmp = paperMapper.selectById(paperId);
+        if (tmp == null)
+            throw new PaperException("论文不存在！");
+        if (!tmp.getUploaderId().equals(userId))
+            throw new MyAuthenticationException("您无权限删除该论文");
+        return tmp;
+    }
+
+    private Paper operable(Integer paperId, Integer userId) {
+        Paper tmp = paperMapper.selectById(paperId);
+        if (tmp == null)
+            throw new PaperException("论文不存在！");
+        // TODO 日后修改团队权限
+//        if (!tmp.getUploaderId().equals(userId))
+//            throw new MyAuthenticationException("您无权限操作该论文");
+        if (tmp.getUploaderId().equals(userId))
+            return tmp;
+        List<Integer> userIds = paperMapper.selectOperators(paperId);
+        if (userIds.contains(userId))
+            return tmp;
+        throw new MyAuthenticationException("您无权限操作论文：" + tmp.getName());
     }
 
 }

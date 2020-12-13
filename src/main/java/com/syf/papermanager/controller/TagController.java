@@ -59,15 +59,6 @@ public class TagController extends BaseController {
         return response;
     }
 
-    @ApiOperation("获取脑图最近10条操作")
-    @GetMapping("/getRecentOperations")
-    public ResponseEntity getRecentOperations(int themeId) {
-        ResponseEntity response = new ResponseEntity();
-        List<TagOperationVo> res = tagService.selectOperations(themeId);
-        response.setData(res);
-        return response;
-    }
-
     @ApiOperation("增加节点")
     @PostMapping("/add")
     public ResponseEntity addTag(@RequestBody @Validated TagAddVo addVo) {
@@ -95,6 +86,16 @@ public class TagController extends BaseController {
         User currentUser = getCurrentUser();
         tagService.removeTag(removeVo, currentUser);
         response.setData("删除成功");
+        return response;
+    }
+
+    @ApiOperation("彻底删除节点")
+    @DeleteMapping("/delete")
+    public ResponseEntity deleteTag(@RequestParam(value = "tagId") Integer tagId) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        tagService.deleteTag(tagId, currentUser.getId());
+        response.setData("已彻底删除节点！");
         return response;
     }
 

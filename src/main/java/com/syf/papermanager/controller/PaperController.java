@@ -6,6 +6,7 @@ import com.syf.papermanager.bean.entity.Paper;
 import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.vo.page.PageResponseVo;
+import com.syf.papermanager.bean.vo.paper.PaperDeleteVo;
 import com.syf.papermanager.bean.vo.paper.PaperQueryByTagVo;
 import com.syf.papermanager.bean.vo.paper.PaperQueryVo;
 import com.syf.papermanager.bean.vo.paper.PaperSubmitVo;
@@ -113,22 +114,20 @@ public class PaperController extends BaseController {
 
     @ApiOperation("文件删除接口")
     @DeleteMapping("/deletePaper")
-    public ResponseEntity deletePaper(int paperId) {
+    public ResponseEntity deletePaper(@RequestParam(value = "paperId") Integer paperId) {
         ResponseEntity response = new ResponseEntity();
-        Paper paper = paperService.getById(paperId);
-        if (paper == null) {
-            response.setErrorResponse();
-            response.setData("不存在该论文");
-            return response;
-        }
         User currentUser = getCurrentUser();
-        if (paper.getUploaderId() != currentUser.getId()) {
-            response.setErrorResponse();
-            response.setData("只能删除自己的论文");
-            return response;
-        }
-        fileService.deleteFile(paper.getFilePath());
-        paperService.removeById(paperId);
+        paperService.deletePaper(paperId, currentUser.getId());
+        response.setData("删除成功");
+        return response;
+    }
+
+    @ApiOperation("从节点删除论文")
+    @PostMapping("/deleteFromTag")
+    public ResponseEntity deleteFromTag(@RequestBody @Validated PaperDeleteVo deleteVo) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        paperService.deletePaperFromTheme(deleteVo, currentUser.getId());
         response.setData("删除成功");
         return response;
     }

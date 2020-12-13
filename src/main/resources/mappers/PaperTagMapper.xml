@@ -6,4 +6,14 @@
         FROM paper_tag
         WHERE tag_id = #{tagId}
     </select>
+    <select id="selectAssociatedPaper" parameterType="java.lang.Integer" resultType="com.syf.papermanager.bean.entity.Paper">
+        SELECT id, file_path FROM paper INNER JOIN
+            (SELECT paper_id FROM paper_tag WHERE tag_id = #{tagId}) b
+        ON paper.id = b.paper_id
+    </select>
+    <select id="selectAssociatedTagNumber" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT COUNT(0)
+        FROM paper_tag
+        WHERE paper_id = #{paperId}
+    </select>
 </mapper>

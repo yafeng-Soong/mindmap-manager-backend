@@ -23,10 +23,10 @@ public interface TagService extends IService<Tag> {
     List<TagTreeResponseVo> selectTreeByThemeId(Integer themeId);
     List<TagSimpleResponseVo> selectSimpleList(Integer themeId);
     List<TagRemovedVo> selectRemovedList(Integer themeId);
-    List<TagOperationVo> selectOperations(Integer themeId);
     int addTag(TagAddVo addVo, Integer userId);
     int renameTag(TagRenameVo renameVo, Integer userId);
     int removeTag(TagRemoveOrRePositionVo removeVo, User user);
+    int deleteTag(Integer tagId, Integer userId);
     int changePosition(TagRemoveOrRePositionVo rePositionVo, Integer userId);
     int changeOrder(TagReOrderVo reOrderVo, Integer userId);
     int reparentTag(TagReparentVo reparentVo, Integer userId);

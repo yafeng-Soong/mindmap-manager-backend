@@ -1,6 +1,7 @@
 package com.syf.papermanager.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.syf.papermanager.bean.entity.Paper;
 import com.syf.papermanager.bean.entity.PaperTag;
 import org.apache.ibatis.annotations.Param;
 
@@ -15,4 +16,6 @@ import java.util.List;
  */
 public interface PaperTagMapper extends BaseMapper<PaperTag> {
     List<PaperTag> selectByTagId(@Param("tagId") Integer tagId);
+    List<Paper> selectAssociatedPaper(@Param("tagId") Integer tagId);
+    Integer selectAssociatedTagNumber(@Param("paperId") Integer paperId);
 }

@@ -17,4 +17,5 @@ import java.util.List;
 public interface ThemeOperationMapper extends BaseMapper<ThemeOperation> {
     List<TagOperationDTO> selectRemovedTag(@Param("themeId") Integer themeId, @Param("state") Integer state);
     List<TagOperationDTO> selectOperations(@Param("themeId") Integer themeId);
+    int deleteByTagId(@Param("tagId") Integer tagId);
 }

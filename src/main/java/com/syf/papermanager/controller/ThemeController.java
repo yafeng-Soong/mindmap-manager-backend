@@ -7,6 +7,7 @@ import com.syf.papermanager.bean.entity.Theme;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.enums.ThemeState;
 import com.syf.papermanager.bean.vo.page.PageResponseVo;
+import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
 import com.syf.papermanager.bean.vo.theme.*;
 import com.syf.papermanager.service.ThemeService;
 import io.swagger.annotations.Api;
@@ -69,6 +70,15 @@ public class ThemeController extends BaseController {
                 }).collect(Collectors.toList());
         PageResponseVo<ThemeResponseVo> data = new PageResponseVo<>(res, list);
         response.setData(data);
+        return response;
+    }
+
+    @ApiOperation("获取脑图最近10条操作")
+    @GetMapping("/getRecentOperations")
+    public ResponseEntity getRecentOperations(int themeId) {
+        ResponseEntity response = new ResponseEntity();
+        List<TagOperationVo> res = themeService.selectOperations(themeId);
+        response.setData(res);
         return response;
     }
 

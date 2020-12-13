@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.syf.papermanager.bean.dto.TagOperationDTO;
+import com.syf.papermanager.bean.entity.Paper;
 import com.syf.papermanager.bean.entity.ThemeOperation;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.enums.OperationType;
@@ -16,10 +17,14 @@ import com.syf.papermanager.bean.vo.tag.response.TagSimpleResponseVo;
 import com.syf.papermanager.bean.vo.tag.response.TagTreeResponseVo;
 import com.syf.papermanager.exception.MyAuthenticationException;
 import com.syf.papermanager.exception.TagException;
+import com.syf.papermanager.mapper.PaperMapper;
+import com.syf.papermanager.mapper.PaperTagMapper;
 import com.syf.papermanager.mapper.TagMapper;
 import com.syf.papermanager.mapper.ThemeOperationMapper;
+import com.syf.papermanager.service.FileService;
 import com.syf.papermanager.service.TagService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.*;
@@ -38,6 +43,12 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     TagMapper tagMapper;
     @Resource
     ThemeOperationMapper themeOperationMapper;
+    @Resource
+    PaperTagMapper paperTagMapper;
+    @Resource
+    PaperMapper paperMapper;
+    @Resource
+    FileService fileService;
     /***
      * 数据库中每个节点只有自己父节点信息，使用深度优先遍历构建树形结构
      * @param themeId
@@ -114,15 +125,6 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return res;
     }
 
-    @Override
-    public List<TagOperationVo> selectOperations(Integer themeId) {
-        List<TagOperationDTO> list = themeOperationMapper.selectOperations(themeId);
-        List<TagOperationVo> res = list.stream()
-                .map(i -> new TagOperationVo(i))
-                .collect(Collectors.toList());
-        return res;
-    }
-
     // TODO 待添加组的权限验证
     @Override
     public int addTag(TagAddVo addVo, Integer userId) {
@@ -147,10 +149,9 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return tagId;
     }
 
-    // TODO 待添加组的权限验证
     @Override
     public int renameTag(TagRenameVo renameVo, Integer userId) {
-        Tag tempTag = operable(renameVo.getTagId());
+        Tag tempTag = operable(renameVo.getTagId(), userId);
         Tag tag = new Tag();
         tag.setId(renameVo.getTagId());
         tag.setName(renameVo.getName());
@@ -174,10 +175,9 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return themeOperationMapper.insert(operation);
     }
 
-    // TODO 待添加组的权限验证
     @Override
     public int removeTag(TagRemoveOrRePositionVo removeVo, User user) {
-        Tag tempTag = operable(removeVo.getTagId());
+        Tag tempTag = operable(removeVo.getTagId(), user.getId());
         if (tempTag.getFatherId() == 0)
             throw new TagException("根节点无法被删除");
         Tag tag = new Tag();
@@ -193,10 +193,59 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return themeOperationMapper.insert(operation);
     }
 
-    // TODO 待添加组的权限验证
+    @Override
+    @Transactional
+    public int deleteTag(Integer tagId, Integer userId) {
+        Tag tmp = deletable(tagId, userId);
+        Queue<Integer> Q = new LinkedList<>();
+        List<Integer> deleteIds = new ArrayList<>();
+        List<String> filePaths = new ArrayList<>();
+        Q.add(tmp.getId());
+        while(Q.size() > 0) {
+            int top = Q.poll();
+            deleteIds.add(top);
+            List<Integer> children = tagMapper.selectChildrenIds(top);
+            children.forEach(i -> Q.add(i));
+        }
+        // 把所有子节点及其关联paper全删除
+        for (Integer childId: deleteIds) {
+            List<Paper> papers = paperTagMapper.selectAssociatedPaper(childId);
+            papers.forEach(i -> {
+                // paper只与被删除节点关联则删掉
+                int associates = paperTagMapper.selectAssociatedTagNumber(i.getId());
+                if (associates == 1) {
+                    paperMapper.deleteById(i.getId());
+                    filePaths.add(i.getFilePath());
+                }
+            });
+        }
+        // 只保留根节点，供操作记录展示
+        if (deleteIds.size() > 1)
+            deleteIds.remove(0);
+        tagMapper.deleteBatchIds(deleteIds);
+        // 删除根节点除本次操作外的其他操作记录
+        themeOperationMapper.deleteByTagId(tmp.getId());
+        // 修改节点状态
+        Tag deleted = new Tag();
+        deleted.setId(tmp.getId());
+        deleted.setState(TagState.DELETED.getCode());
+        tagMapper.updateById(deleted);
+        // 插入一条彻底删除记录
+        ThemeOperation operation = ThemeOperation.builder()
+                .operatorId(userId)
+                .themeId(tmp.getThemeId())
+                .tagId(tmp.getId())
+                .type(OperationType.DELETED.getCode())
+                .build();
+        themeOperationMapper.insert(operation);
+        // 文件删除放在最后，因为无法回滚
+        filePaths.forEach(i -> fileService.deleteFile(i));
+        return deleteIds.size() + 1;
+    }
+
     @Override
     public int changePosition(TagRemoveOrRePositionVo rePositionVo, Integer userId) {
-        Tag tempTag = operable(rePositionVo.getTagId());
+        Tag tempTag = operable(rePositionVo.getTagId(), userId);
         Tag tag = new Tag();
         tag.setId(rePositionVo.getTagId());
         tag.setPosition(!tempTag.isPosition());
@@ -210,10 +259,9 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return themeOperationMapper.insert(operation);
     }
 
-    // TODO 待添加组的权限验证
     @Override
     public int changeOrder(TagReOrderVo reOrderVo, Integer userId) {
-        Tag tempTag = operable(reOrderVo.getMovedTagId());
+        Tag tempTag = operable(reOrderVo.getMovedTagId(), userId);
         Tag insertTag = tagMapper.selectById(reOrderVo.getInsertTagId());
         if (insertTag == null)
             throw new TagException("被交换节点不存在！");
@@ -240,7 +288,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
     @Override
     public int reparentTag(TagReparentVo reparentVo, Integer userId) {
-        Tag tempTag = operable(reparentVo.getTagId());
+        Tag tempTag = operable(reparentVo.getTagId(), userId);
         Tag father = tagMapper.selectById(reparentVo.getFatherId());
         if (father == null)
             throw new TagException("无法移动节点，因为没有对应父节点");
@@ -264,21 +312,56 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
     @Override
     public int recoverTag(Integer tagId, Integer userId) {
-        Tag temp = tagMapper.selectById(tagId);
-        if (!temp.getState().equals(TagState.REMOVED.getCode()))
-            throw new TagException("只能恢复被删除节点");
-        temp.setState(TagState.NORMAL.getCode());
-        return tagMapper.updateById(temp);
+        Tag temp = recoverable(tagId, userId);
+        Tag tag = new Tag();
+        tag.setId(tagId);
+        tag.setState(TagState.NORMAL.getCode());
+        tagMapper.updateById(tag);
+        ThemeOperation operation = ThemeOperation.builder()
+                .operatorId(userId)
+                .themeId(temp.getThemeId())
+                .tagId(tagId)
+                .type(OperationType.RECOVER.getCode())
+                .build();
+        return themeOperationMapper.insert(operation);
     }
 
-    private Tag operable(Integer tagId) {
+    private Tag operable(Integer tagId, Integer userId) {
         Tag tempTag = tagMapper.selectById(tagId);
-        if (tempTag.getState() == 2)
-            throw new MyAuthenticationException("节点已被锁定，无法操作");
         if (tempTag == null)
             throw new TagException("被操作节点不存在");
+        if (tempTag.getState() == 2)
+            throw new MyAuthenticationException("节点已被锁定，无法操作");
         if (tempTag.getState() != 0)
             throw new TagException("节点不可操作");
+        int fatherId = tempTag.getFatherId();
+        while (fatherId != 0) {
+            Tag father = tagMapper.selectById(fatherId);
+            if (father.getState().equals(TagState.REMOVED.getCode()))
+                throw new TagException("节点已被删除");
+            fatherId = father.getFatherId();
+        }
+        // TODO 等待添加团队权限
         return tempTag;
+    }
+
+    private Tag recoverable(Integer tagId, Integer userId) {
+        Tag tmp = tagMapper.selectById(tagId);
+        if (tmp == null)
+            throw new TagException("节点不存在！");
+        if (!tmp.getState().equals(TagState.REMOVED.getCode()))
+            throw new TagException("只能恢复被删除节点");
+        // TODO 等待添加组权限验证
+        return tmp;
+    }
+
+    private Tag deletable(Integer tagId, Integer userId) {
+        Tag tmp = tagMapper.selectById(tagId);
+        if (tmp == null)
+            throw new TagException("节点不存在！");
+        if (!tmp.getState().equals(TagState.REMOVED.getCode()))
+            throw new TagException("节点不在回收站！");
+        // TODO 等待添加权限验证
+        return tmp;
     }
 }

@@ -3,6 +3,7 @@ package com.syf.papermanager.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.syf.papermanager.bean.entity.Paper;
+import com.syf.papermanager.bean.vo.paper.PaperDeleteVo;
 import com.syf.papermanager.bean.vo.paper.PaperQueryByTagVo;
 import com.syf.papermanager.bean.vo.paper.PaperQueryVo;
 import com.syf.papermanager.bean.vo.paper.PaperSubmitVo;
@@ -20,6 +21,8 @@ public interface PaperService extends IService<Paper> {
     List<Paper> selectByTagId(int tagId);
     int insertPaper(PaperSubmitVo submitVo, int userId);
     int updateFilePath(String filePath, int paperId);
+    int deletePaper(Integer paperId, Integer userId);
+    int deletePaperFromTheme(PaperDeleteVo deleteVo, Integer userId);
     Page<Paper> selectPageList(PaperQueryVo queryVo, Integer uerId);
     Page<Paper> selectPageListByTagId(PaperQueryByTagVo queryVo);
     boolean hasPaper(Integer paperId, Integer userId);

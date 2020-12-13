@@ -5,13 +5,13 @@
         SELECT username, avatar, b.tag_id, b.name, b.create_time
         FROM user u INNER JOIN
             (
-                SELECT op.tag_id, t.name, op.operator_id, op.create_time
-                FROM theme_operation op INNER JOIN tag t
+                SELECT op.tag_id, t.name, op.type, op.operator_id, MAX(op.create_time) as create_time
+                FROM `theme_operation` op INNER JOIN tag t
                 ON op.tag_id = t.id
                 WHERE op.theme_id = #{themeId} and t.state = #{state} and op.type = 2
-                ORDER BY op.create_time DESC LIMIT 10
+                GROUP BY op.tag_id
             ) b
-        ON u.id = b.operator_id ORDER BY b.create_time DESC
+        ON u.id = b.operator_id ORDER BY b.create_time DESC LIMIT 10
     </select>
     <select id="selectOperations" resultType="com.syf.papermanager.bean.dto.TagOperationDTO">
         SELECT username, avatar,b.type, b.name, b.create_time
@@ -24,4 +24,7 @@
             ) b
         ON u.id = b.operator_id ORDER BY b.create_time DESC LIMIT 10
     </select>
+    <delete id="deleteByTagId" parameterType="java.lang.Integer">
+        DELETE FROM theme_operation WHERE tag_id = #{tagId}
+    </delete>
 </mapper>

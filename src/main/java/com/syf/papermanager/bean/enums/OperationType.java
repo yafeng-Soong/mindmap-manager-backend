@@ -20,7 +20,10 @@ public enum OperationType {
     REMOVE("删除节点",2),
     RENAME("重命名节点",3),
     MOVE("重排序节点",4),
-    REPARENT("移动节点", 5);
+    REPARENT("移动节点", 5),
+    DELETED("彻底删除",6),
+    COMBINE("引入节点", 7),
+    RECOVER("还原节点", 8);
 
     private String description;
     private Integer code;

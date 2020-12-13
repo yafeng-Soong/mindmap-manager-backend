@@ -14,8 +14,9 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum TagState {
     NORMAL("正常", 0),
-    REMOVED("被删除", 1),
-    LOCKED("被锁定",2);
+    REMOVED("被删除（在回收站）", 1),
+    LOCKED("被锁定",2),
+    DELETED("彻底删除", 3);
     private String state;
     private Integer code;
 }

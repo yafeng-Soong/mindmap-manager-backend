@@ -3,6 +3,7 @@ package com.syf.papermanager.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.syf.papermanager.bean.entity.Theme;
+import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import com.syf.papermanager.bean.vo.theme.ThemeCombineVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
@@ -21,8 +22,10 @@ import java.util.List;
 public interface ThemeService extends IService<Theme> {
     List<Theme> selectList(Integer creatorId, Integer selfId);
     Page<Theme> selectPageList(ThemeQueryVo queryVo, Integer userId);
+    List<TagOperationVo> selectOperations(Integer themeId);
     int addTheme(ThemeAddVo addVo, Integer userId);
     int updateTheme(ThemeUpdateVo updateVo, Integer userId);
+    int deleteTheme(Integer themeId, Integer userId);
     int createFromXmind(MultipartFile file, String themeName, String description,Integer userId) throws RuntimeException;
     int updateThemeState(Integer themeId, Integer userId, Integer stateCode);
     void combineTheme(ThemeCombineVo combineVo, Integer userId);

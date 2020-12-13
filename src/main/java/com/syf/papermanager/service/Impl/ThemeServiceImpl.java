@@ -4,11 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.syf.papermanager.bean.dto.TagOperationDTO;
 import com.syf.papermanager.bean.entity.PaperTag;
 import com.syf.papermanager.bean.entity.Tag;
 import com.syf.papermanager.bean.entity.Theme;
+import com.syf.papermanager.bean.entity.ThemeOperation;
+import com.syf.papermanager.bean.enums.OperationType;
 import com.syf.papermanager.bean.enums.TagState;
 import com.syf.papermanager.bean.enums.ThemeState;
+import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import com.syf.papermanager.bean.vo.theme.ThemeCombineVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
@@ -19,6 +23,7 @@ import com.syf.papermanager.exception.ThemeException;
 import com.syf.papermanager.mapper.PaperTagMapper;
 import com.syf.papermanager.mapper.TagMapper;
 import com.syf.papermanager.mapper.ThemeMapper;
+import com.syf.papermanager.mapper.ThemeOperationMapper;
 import com.syf.papermanager.service.ThemeService;
 import com.syf.papermanager.utils.MyIterables;
 import javafx.util.Pair;
@@ -35,6 +40,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * @project_name: paper-manager
@@ -52,6 +58,8 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     TagMapper tagMapper;
     @Resource
     PaperTagMapper paperTagMapper;
+    @Resource
+    ThemeOperationMapper themeOperationMapper;
     @Override
     public List<Theme> selectList(Integer creatorId, Integer selfId) {
         QueryWrapper<Theme> queryWrapper = new QueryWrapper<>();
@@ -73,6 +81,15 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
         queryWrapper.orderByDesc("update_time");
         Page<Theme> page = new Page<>(queryVo.getCurrentPage(), queryVo.getPageSize());
         return themeMapper.selectPage(page, queryWrapper);
+    }
+
+    @Override
+    public List<TagOperationVo> selectOperations(Integer themeId) {
+        List<TagOperationDTO> list = themeOperationMapper.selectOperations(themeId);
+        List<TagOperationVo> res = list.stream()
+                .map(i -> new TagOperationVo(i))
+                .collect(Collectors.toList());
+        return res;
     }
 
     @Override
@@ -108,6 +125,13 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
         if (allBlank) throw new ThemeException("至少一个字段不为空");
         return themeMapper.updateById(theme);
     }
+
+    @Override
+    public int deleteTheme(Integer themeId, Integer userId) {
+
+        return 0;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     @Override
     public int createFromXmind(MultipartFile file, String themeName, String description, Integer userId) throws RuntimeException {
@@ -203,12 +227,13 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     public void combineTheme(ThemeCombineVo combineVo, Integer userId) {
         int themeId = combineVo.getFromThemeId();
         int toTagId = combineVo.getToTagId();
-        themeOperable(themeId, userId);
+        combineAble(themeId, userId);
         Tag toTag = tagOperable(toTagId, userId);
-        if (toTag.getThemeId() == themeId)
+        int toThemeId = toTag.getThemeId();
+        combineAble(toThemeId, userId);
+        if (toThemeId == themeId)
             throw new ThemeException("不能合并到自己");
         boolean position = toTag.isPosition();
-        int toThemeId = toTag.getThemeId();
         Queue<Pair<Integer, Integer>> QS = new LinkedList<>(); // 记录原始节点id
         QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("theme_id", themeId);
@@ -236,14 +261,28 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
             List<Integer> childrenIds = tagMapper.selectChildrenIds(top.getKey());
             childrenIds.forEach(i -> QS.add(new Pair<>(i,tag.getId())));
         }
+        ThemeOperation operation = ThemeOperation.builder()
+                .operatorId(userId)
+                .themeId(tmp.getId())
+                .tagId(toTagId)
+                .type(OperationType.COMBINE.getCode())
+                .build();
+        themeOperationMapper.insert(operation);
     }
 
     private void themeOperable(Integer themeId, Integer userId) {
         Theme tmpTheme = themeMapper.selectById(themeId);
         if (tmpTheme == null)
             throw new ThemeException("脑图不存在");
+        // TODO 等待添加团队权限
         if (!tmpTheme.getCreatorId().equals(userId))
             throw new MyAuthenticationException("您没有操作该脑图权限");
+    }
+
+    private void combineAble(Integer themeId, Integer userId) {
+        Theme tmp = themeMapper.selectById(themeId);
+        if (tmp == null)
+            throw new ThemeException("脑图不能存在！");
     }
 
     private Tag tagOperable(Integer tagId, Integer userId) {
@@ -251,6 +290,7 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
         if (tmp == null)
             throw new ThemeException("新的父节点不存在");
         Theme newTheme = themeMapper.selectById(tmp.getThemeId());
+        // TODO 等待添加团队权限
         if (!newTheme.getCreatorId().equals(userId))
             throw new MyAuthenticationException("您没有合并权限");
         return tmp;

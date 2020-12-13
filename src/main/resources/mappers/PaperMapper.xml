@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.syf.papermanager.mapper.PaperMapper">
+    <select id="selectOperators" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT user_id FROM theme_member tm INNER JOIN
+        (SELECT theme_id FROM tag INNER JOIN
+            (SELECT tag_id FROM paper_tag WHERE paper_id = #{paperId}) pt ON tag.id = pt.tag_id GROUP BY theme_id
+        ) b
+        ON tm.theme_id = b.theme_id
+    </select>
+    <select id="selectAssociatedTagNumber" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT COUNT(tag_id) FROM paper_tag WHERE paper_id = #{paperId}
+    </select>
+</mapper>
