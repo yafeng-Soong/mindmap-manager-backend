@@ -43,14 +43,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity tagException(TagException e) {
         ResponseEntity response = new ResponseEntity();
         response.setErrorResponse();
-        response.setMsg(e.getMessage());
+        response.setData(e.getMessage());
         return response;
     }
     @ExceptionHandler(value = ThemeException.class)
     public ResponseEntity themeException(ThemeException e) {
         ResponseEntity response = new ResponseEntity();
         response.setErrorResponse();
-        response.setMsg(e.getMessage());
+        response.setData(e.getMessage());
         return response;
     }
     @ExceptionHandler(value = PaperException.class)
@@ -66,7 +66,7 @@ public class GlobalExceptionHandler {
         ResponseEntity response = new ResponseEntity();
         response.setCode(ResponseEnums.LOGIN_UNKNOWN.getCode());
         response.setMsg(ResponseEnums.LOGIN_UNKNOWN.getMsg());
-        response.setData(e.getMessage());
+        response.setData(ResponseEnums.LOGIN_UNKNOWN.getMsg());
         return response;
     }
 
@@ -76,6 +76,7 @@ public class GlobalExceptionHandler {
         ResponseEntity response = new ResponseEntity();
         response.setCode(ResponseEnums.LOGIN_DISABLE.getCode());
         response.setMsg(ResponseEnums.LOGIN_DISABLE.getMsg());
+        response.setData(ResponseEnums.LOGIN_DISABLE.getMsg());
         return response;
     }
 
@@ -85,6 +86,7 @@ public class GlobalExceptionHandler {
         ResponseEntity response = new ResponseEntity();
         response.setCode(ResponseEnums.LOGIN_ERROR.getCode());
         response.setMsg(ResponseEnums.LOGIN_ERROR.getMsg());
+        response.setData(ResponseEnums.LOGIN_ERROR.getMsg());
         return response;
     }
 
@@ -106,7 +108,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity myAuthenticationException(MyAuthenticationException e) {
         ResponseEntity response = new ResponseEntity();
         response.setCode(ResponseEnums.UNAUTHENTICATED.getCode());
-        response.setMsg(e.getMessage());
+        response.setMsg(ResponseEnums.UNAUTHENTICATED.getMsg());
+        response.setData(e.getMessage());
         return response;
     }
 
@@ -116,7 +119,7 @@ public class GlobalExceptionHandler {
         e.printStackTrace();
         ResponseEntity response = new ResponseEntity();
         response.setErrorResponse();
-        response.setMsg("服务器异常");
+        response.setData("服务器内部异常");
         return  response;
     }
 }

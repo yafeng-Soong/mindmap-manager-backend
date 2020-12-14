@@ -22,7 +22,6 @@ public interface TagService extends IService<Tag> {
     // TODO 最好所有方法都加上userId参数
     List<TagTreeResponseVo> selectTreeByThemeId(Integer themeId);
     List<TagSimpleResponseVo> selectSimpleList(Integer themeId);
-    List<TagRemovedVo> selectRemovedList(Integer themeId);
     int addTag(TagAddVo addVo, Integer userId);
     int renameTag(TagRenameVo renameVo, Integer userId);
     int removeTag(TagRemoveOrRePositionVo removeVo, User user);

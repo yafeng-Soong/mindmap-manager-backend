@@ -50,15 +50,6 @@ public class TagController extends BaseController {
         return response;
     }
 
-    @ApiOperation("获取一个脑图中被删除的节点列表")
-    @GetMapping("/getRemovedList")
-    public ResponseEntity getRemovedList(int themeId) {
-        ResponseEntity response = new ResponseEntity();
-        List<TagRemovedVo> res = tagService.selectRemovedList(themeId);
-        response.setData(res);
-        return response;
-    }
-
     @ApiOperation("增加节点")
     @PostMapping("/add")
     public ResponseEntity addTag(@RequestBody @Validated TagAddVo addVo) {

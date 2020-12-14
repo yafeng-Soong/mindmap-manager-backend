@@ -116,15 +116,6 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         return res;
     }
 
-    @Override
-    public List<TagRemovedVo> selectRemovedList(Integer themeId) {
-        List<TagOperationDTO> list = themeOperationMapper.selectRemovedTag(themeId, TagState.REMOVED.getCode());
-        List<TagRemovedVo> res = list.stream()
-                .map(i -> new TagRemovedVo(i))
-                .collect(Collectors.toList());
-        return res;
-    }
-
     // TODO 待添加组的权限验证
     @Override
     public int addTag(TagAddVo addVo, Integer userId) {
@@ -139,13 +130,6 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         else tag.setInnerOrder(order+1);
         tagMapper.insert(tag);
         int tagId = tag.getId();
-//        ThemeOperation operation = ThemeOperation.builder()
-//                .operatorId(userId)
-//                .themeId(father.getThemeId())
-//                .tagId(tagId)
-//                .type(OperationType.ADD.getCode())
-//                .build();
-//        themeOperationMapper.insert(operation);
         return tagId;
     }
 
@@ -157,8 +141,8 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         tag.setName(renameVo.getName());
         tagMapper.updateById(tag);
         ThemeOperation operation;
-        // 若之前名字为空，则是新增节点操作（前端新增节点默认名字为空）
-        if (StringUtils.isBlank(tempTag.getName()))
+        // 若创建时间等于更新时间，则是新增节点操作（前端新增节点默认名字为空）
+        if (tempTag.getCreateTime().compareTo(tempTag.getUpdateTime()) == 0)
             operation = ThemeOperation.builder()
                     .operatorId(userId)
                     .themeId(tempTag.getThemeId())

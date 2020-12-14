@@ -1,18 +1,19 @@
 package com.syf.papermanager.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.syf.papermanager.bean.dto.TagOperationDTO;
-import com.syf.papermanager.bean.entity.PaperTag;
-import com.syf.papermanager.bean.entity.Tag;
-import com.syf.papermanager.bean.entity.Theme;
-import com.syf.papermanager.bean.entity.ThemeOperation;
+import com.syf.papermanager.bean.entity.*;
 import com.syf.papermanager.bean.enums.OperationType;
 import com.syf.papermanager.bean.enums.TagState;
 import com.syf.papermanager.bean.enums.ThemeState;
+import com.syf.papermanager.bean.vo.operation.OperationQueryVo;
+import com.syf.papermanager.bean.vo.tag.request.TagRemovedQueryVo;
 import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
+import com.syf.papermanager.bean.vo.tag.response.TagRemovedVo;
 import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
 import com.syf.papermanager.bean.vo.theme.ThemeCombineVo;
 import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
@@ -20,10 +21,8 @@ import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
 import com.syf.papermanager.exception.FileUploadException;
 import com.syf.papermanager.exception.MyAuthenticationException;
 import com.syf.papermanager.exception.ThemeException;
-import com.syf.papermanager.mapper.PaperTagMapper;
-import com.syf.papermanager.mapper.TagMapper;
-import com.syf.papermanager.mapper.ThemeMapper;
-import com.syf.papermanager.mapper.ThemeOperationMapper;
+import com.syf.papermanager.mapper.*;
+import com.syf.papermanager.service.FileService;
 import com.syf.papermanager.service.ThemeService;
 import com.syf.papermanager.utils.MyIterables;
 import javafx.util.Pair;
@@ -36,6 +35,7 @@ import org.xmind.core.*;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -59,7 +59,11 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     @Resource
     PaperTagMapper paperTagMapper;
     @Resource
+    PaperMapper paperMapper;
+    @Resource
     ThemeOperationMapper themeOperationMapper;
+    @Resource
+    FileService fileService;
     @Override
     public List<Theme> selectList(Integer creatorId, Integer selfId) {
         QueryWrapper<Theme> queryWrapper = new QueryWrapper<>();
@@ -84,11 +88,36 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     }
 
     @Override
-    public List<TagOperationVo> selectOperations(Integer themeId) {
-        List<TagOperationDTO> list = themeOperationMapper.selectOperations(themeId);
-        List<TagOperationVo> res = list.stream()
+    public Page<TagOperationVo> selectOperations(OperationQueryVo queryVo, Integer userId) {
+        themeOperable(queryVo.getThemeId(), userId);
+        Page<TagOperationDTO> page = new Page<>(queryVo.getCurrentPage(), queryVo.getPageSize());
+        IPage<TagOperationDTO> data = themeOperationMapper.selectOperations(page, queryVo.getThemeId());
+        Page<TagOperationVo> res = new Page<>();
+        res.setSize(data.getSize());
+        res.setCurrent(data.getCurrent());
+        res.setPages(data.getPages());
+        res.setTotal(data.getTotal());
+        List<TagOperationVo> records = data.getRecords().stream()
                 .map(i -> new TagOperationVo(i))
                 .collect(Collectors.toList());
+        res.setRecords(records);
+        return res;
+    }
+
+    @Override
+    public Page<TagRemovedVo> selectRemovedTagList(TagRemovedQueryVo queryVo, Integer userId) {
+        themeOperable(queryVo.getThemeId(), userId);
+        Page<TagOperationDTO> page = new Page<>(queryVo.getCurrentPage(), queryVo.getPageSize());
+        IPage<TagOperationDTO> data = themeOperationMapper.selectRemovedTag(page, queryVo.getThemeId(), TagState.REMOVED.getCode());
+        Page<TagRemovedVo> res = new Page<>();
+        res.setSize(data.getSize());
+        res.setCurrent(data.getCurrent());
+        res.setPages(data.getPages());
+        res.setTotal(data.getTotal());
+        List<TagRemovedVo> records = data.getRecords().stream()
+                .map(i -> new TagRemovedVo(i))
+                .collect(Collectors.toList());
+        res.setRecords(records);
         return res;
     }
 
@@ -127,9 +156,37 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     }
 
     @Override
+    @Transactional
     public int deleteTheme(Integer themeId, Integer userId) {
-
-        return 0;
+        themeOperable(themeId, userId);
+        Integer rootId = tagMapper.selectRootTag(themeId);
+        if (rootId == null)
+            throw  new ThemeException("根节点不存在！");
+        Queue<Integer> Q = new LinkedList<>();
+        List<Integer> deleteIds = new ArrayList<>();
+        List<String> filePaths = new ArrayList<>();
+        Q.add(rootId);
+        while (Q.size() > 0) {
+            int top = Q.poll();
+            deleteIds.add(top);
+            List<Integer> children = tagMapper.selectChildrenIds(top);
+            children.forEach(i -> Q.add(i));
+        }
+        for (Integer childId: deleteIds) {
+            List<Paper> papers = paperTagMapper.selectAssociatedPaper(childId);
+            papers.forEach(i -> {
+                // paper只与被删除节点关联则删掉
+                int associates = paperTagMapper.selectAssociatedTagNumber(i.getId());
+                if (associates == 1) {
+                    paperMapper.deleteById(i.getId());
+                    filePaths.add(i.getFilePath());
+                }
+            });
+        }
+        tagMapper.deleteBatchIds(deleteIds);
+        themeMapper.deleteById(themeId);
+        filePaths.forEach(i -> fileService.deleteFile(i));
+        return deleteIds.size();
     }
 
     @Transactional(rollbackFor = Exception.class)

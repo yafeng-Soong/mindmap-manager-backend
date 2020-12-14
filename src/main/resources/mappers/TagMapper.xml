@@ -7,4 +7,7 @@
     <select id="selectChildrenIds" parameterType="java.lang.Integer" resultType="java.lang.Integer">
         SELECT id FROM tag WHERE father_id = #{fatherId} and state = 0
     </select>
+    <select id="selectRootTag" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT id FROM tag WHERE theme_id = #{themeId} and father_id = 0 LIMIT 1
+    </select>
 </mapper>

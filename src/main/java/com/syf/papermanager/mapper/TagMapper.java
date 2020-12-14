@@ -2,6 +2,7 @@ package com.syf.papermanager.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.syf.papermanager.bean.entity.Tag;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -15,4 +16,5 @@ import java.util.List;
 public interface TagMapper extends BaseMapper<Tag> {
     Integer selectMaxOrder(Integer fatherId);
     List<Integer> selectChildrenIds(Integer fatherId);
+    Integer selectRootTag(@Param("themeId") Integer themeId);
 }

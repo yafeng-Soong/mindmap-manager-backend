@@ -6,8 +6,11 @@ import com.syf.papermanager.bean.entity.ResponseEntity;
 import com.syf.papermanager.bean.entity.Theme;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.enums.ThemeState;
+import com.syf.papermanager.bean.vo.operation.OperationQueryVo;
 import com.syf.papermanager.bean.vo.page.PageResponseVo;
+import com.syf.papermanager.bean.vo.tag.request.TagRemovedQueryVo;
 import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
+import com.syf.papermanager.bean.vo.tag.response.TagRemovedVo;
 import com.syf.papermanager.bean.vo.theme.*;
 import com.syf.papermanager.service.ThemeService;
 import io.swagger.annotations.Api;
@@ -73,12 +76,25 @@ public class ThemeController extends BaseController {
         return response;
     }
 
-    @ApiOperation("获取脑图最近10条操作")
-    @GetMapping("/getRecentOperations")
-    public ResponseEntity getRecentOperations(int themeId) {
+    @ApiOperation("获取脑图操作记录")
+    @PostMapping("/getOperations")
+    public ResponseEntity getRecentOperations(@RequestBody @Validated OperationQueryVo queryVo) {
         ResponseEntity response = new ResponseEntity();
-        List<TagOperationVo> res = themeService.selectOperations(themeId);
-        response.setData(res);
+        User currentUser = getCurrentUser();
+        Page<TagOperationVo> res = themeService.selectOperations(queryVo, currentUser.getId());
+        PageResponseVo<TagOperationVo> data = new PageResponseVo<>(res);
+        response.setData(data);
+        return response;
+    }
+
+    @ApiOperation("获取一个脑图中被删除的节点列表")
+    @PostMapping("/getRemovedTagList")
+    public ResponseEntity getRemovedList(@RequestBody @Validated TagRemovedQueryVo queryVo) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        Page<TagRemovedVo> res = themeService.selectRemovedTagList(queryVo, currentUser.getId());
+        PageResponseVo<TagRemovedVo> data = new PageResponseVo<>(res);
+        response.setData(data);
         return response;
     }
 
@@ -144,6 +160,16 @@ public class ThemeController extends BaseController {
         User currentUser = getCurrentUser();
         themeService.combineTheme(combineVo, currentUser.getId());
         response.setData("合并成功！");
+        return response;
+    }
+
+    @ApiOperation("删除脑图")
+    @DeleteMapping("/delete")
+    public ResponseEntity deleteTheme(@RequestParam(value = "themeId") Integer themeId) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        themeService.deleteTheme(themeId, currentUser.getId());
+        response.setData("删除成功！");
         return response;
     }
 }

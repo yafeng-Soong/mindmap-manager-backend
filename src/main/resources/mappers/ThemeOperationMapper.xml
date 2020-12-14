@@ -11,7 +11,7 @@
                 WHERE op.theme_id = #{themeId} and t.state = #{state} and op.type = 2
                 GROUP BY op.tag_id
             ) b
-        ON u.id = b.operator_id ORDER BY b.create_time DESC LIMIT 10
+        ON u.id = b.operator_id ORDER BY b.create_time DESC
     </select>
     <select id="selectOperations" resultType="com.syf.papermanager.bean.dto.TagOperationDTO">
         SELECT username, avatar,b.type, b.name, b.create_time
@@ -22,7 +22,7 @@
                 ON op.tag_id = t.id
                 WHERE op.theme_id = #{themeId}
             ) b
-        ON u.id = b.operator_id ORDER BY b.create_time DESC LIMIT 10
+        ON u.id = b.operator_id ORDER BY b.create_time DESC
     </select>
     <delete id="deleteByTagId" parameterType="java.lang.Integer">
         DELETE FROM theme_operation WHERE tag_id = #{tagId}
