@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.IncorrectCredentialsException;
 import org.apache.shiro.authc.UnknownAccountException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.mail.SendFailedException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +57,13 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(value = PaperException.class)
     public ResponseEntity PaperException(PaperException e) {
+        ResponseEntity response = new ResponseEntity();
+        response.setErrorResponse();
+        response.setData(e.getMessage());
+        return response;
+    }
+    @ExceptionHandler(UserException.class)
+    public ResponseEntity userException(UserException e) {
         ResponseEntity response = new ResponseEntity();
         response.setErrorResponse();
         response.setData(e.getMessage());
@@ -110,6 +119,13 @@ public class GlobalExceptionHandler {
         response.setCode(ResponseEnums.UNAUTHENTICATED.getCode());
         response.setMsg(ResponseEnums.UNAUTHENTICATED.getMsg());
         response.setData(e.getMessage());
+        return response;
+    }
+    @ExceptionHandler(SendFailedException.class)
+    public ResponseEntity sendFailedException() {
+        ResponseEntity response = new ResponseEntity();
+        response.setErrorResponse();
+        response.setData("无效邮箱");
         return response;
     }
 

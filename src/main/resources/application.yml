@@ -1,11 +1,12 @@
 server:
   port: 8082
+  address: IP
 
 spring:
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/paper_manager_test?useUnicode=true&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC
-    username: root
-    password: fuck@you
+    url: jdbc:mysql://yourIp:3306/yourDatabase?useUnicode=true&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC
+    username: yourName
+    password: yourPassword
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.zaxxer.hikari.HikariDataSource
     hikari:
@@ -16,8 +17,38 @@ spring:
       max-lifetime: 45000
       auto-commit: true
       pool-name: PaperHikariCP
+  redis:
+    host: IP
+    port: 6379
+    password: yourPassword
+    jedis:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: 20000
+    database: 1
+    timeout: 5000
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
+  mail:
+    protocol: smtp
+    host: smtp.qq.com
+    username: yourEmailAddress
+    password: yourPassword
+    default-encoding: utf-8
+    properties:
+      mail:
+        port: 465
+        smtp:
+          auth: true
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+            fallback: false
+          starttls:
+            enable: true
+            required: true
   # 文件上传大小限制
   servlet:
     multipart:
