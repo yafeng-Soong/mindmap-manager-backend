@@ -39,7 +39,7 @@ public class EmailService {
     //读取配置文件中的参数
     @Value("${spring.mail.username}")
     private String sender;
-    @Value("${server.address}")
+    @Value("${back.address}")
     private String address;
     @Value("${server.port}")
     private int serverPort;

@@ -1,6 +1,5 @@
 server:
   port: 8082
-  address: IP
 
 spring:
   datasource:
@@ -59,3 +58,10 @@ mybatis-plus:
   mapper-locations: classpath:mappers/*.xml
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 自定义属性，用于激活账号
+front:
+  address: front-IP
+  port: 80
+back:
+  address: server-IP

@@ -83,6 +83,7 @@ public class ShiroUserFilter extends FormAuthenticationFilter {
             //resp.setStatus(HttpStatus.UNAUTHORIZED.value());
             PrintWriter out = resp.getWriter();
             ResponseEntity result = new ResponseEntity(ResponseEnums.UNAUTHORIZED.getCode(), ResponseEnums.UNAUTHORIZED.getMsg());
+            result.setData(ResponseEnums.UNAUTHORIZED.getMsg());
             out.println(JSONObject.toJSONString(result));
             out.flush();
             out.close();

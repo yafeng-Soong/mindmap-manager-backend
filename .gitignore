@@ -36,3 +36,4 @@ build/
 .vscode/
 
 ### outer config ###
+/config/application.yml
