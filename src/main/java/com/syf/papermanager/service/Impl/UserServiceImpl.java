@@ -111,7 +111,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         PasswordHelper helper = new PasswordHelper();
         helper.encryptPassword(user);
         UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("email", email);
-        return userMapper.update(user, updateWrapper);
+        updateWrapper.eq("email", email)
+                .set("password", user.getPassword())
+                .set("salt", user.getSalt());
+        return userMapper.update(null, updateWrapper);
     }
 }

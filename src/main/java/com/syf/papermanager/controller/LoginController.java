@@ -69,10 +69,12 @@ public class LoginController extends BaseController {
      * @return
      */
     @GetMapping("/logout")
-    public String logout(){
+    public ResponseEntity logout(){
+        ResponseEntity response = new ResponseEntity();
         Subject subject = SecurityUtils.getSubject();
         subject.getSession().removeAttribute("currentUser");
         subject.logout();
-        return "您已经退出登录！";
+        response.setData("您已经退出登录！");
+        return response;
     }
 }
