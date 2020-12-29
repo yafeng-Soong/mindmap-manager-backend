@@ -53,20 +53,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional
     public int createUser(RegisterAndLoginVo registerVo) throws Exception{
-        User user = new User();
-        user.setEmail(registerVo.getEmail());
-        user.setPassword(registerVo.getPassword());
-        user.setUsername(registerVo.getEmail());
+        User tmp = selectByEmail(registerVo.getEmail());
         PasswordHelper helper = new PasswordHelper();
-        helper.encryptPassword(user);
-        try {
+        if (tmp == null) {
+            User user = new User();
+            user.setEmail(registerVo.getEmail());
+            user.setPassword(registerVo.getPassword());
+            user.setUsername(registerVo.getEmail());
+            helper.encryptPassword(user);
             userMapper.insert(user);
-        } catch (DuplicateKeyException e) {
-            throw new UserException("注册失败," + registerVo.getEmail() + "邮箱已被注册");
+            String subject = "尊敬的用户，请激活您的账号";
+            emailService.sendTemplateMail(user.getEmail(), "activateAccount", subject);
+            return user.getId();
         }
-        String subject = "尊敬的用户，请激活您的账号";
-        emailService.sendTemplateMail(user.getEmail(), "activateAccount", subject);
-        return user.getId();
+        if (tmp.getState() == UserState.INACTIVE.getCode()) {
+            tmp.setPassword(registerVo.getPassword());
+            helper.encryptPassword(tmp);
+            userMapper.updateById(tmp);
+            String subject = "尊敬的用户，请激活您的账号";
+            emailService.sendTemplateMail(tmp.getEmail(), "activateAccount", subject);
+            return tmp.getId();
+        }
+        if (tmp.getState() == UserState.ACTIVE.getCode())
+            throw new UserException("注册失败," + registerVo.getEmail() + "邮箱已被注册");
+        return 0;
     }
 
     @Override
