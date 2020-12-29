@@ -64,6 +64,15 @@ public class LoginController extends BaseController {
         return "(✿✪‿✪｡)ﾉｺﾝﾁｬ♡，" + username + "当你看到这条消息表示你已经登陆了哦!";
     }
 
+    @GetMapping("/isLogin")
+    @ApiOperation("/根据Cooke判断是否登录")
+    public ResponseEntity isLogin() {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        response.setData(currentUser);
+        return response;
+    }
+
     /**
      * 退出登录，实质上是去掉session
      * @return

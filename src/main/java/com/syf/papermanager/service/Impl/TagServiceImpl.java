@@ -1,6 +1,7 @@
 package com.syf.papermanager.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.syf.papermanager.bean.dto.TagOperationDTO;
@@ -113,6 +114,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
             List<Tag> tagList = tagMapper.selectList(queryWrapper);
             tagList.forEach(i -> Q.add(i.getId()));
         }
+        tags.clear();
         return res;
     }
 
@@ -139,6 +141,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag tag = new Tag();
         tag.setId(renameVo.getTagId());
         tag.setName(renameVo.getName());
+        tag.setPosition(tempTag.isPosition()); // 有默认值
         tagMapper.updateById(tag);
         ThemeOperation operation;
         // 若创建时间等于更新时间，则是新增节点操作（前端新增节点默认名字为空）
@@ -167,6 +170,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag tag = new Tag();
         tag.setId(removeVo.getTagId());
         tag.setState(1);
+        tag.setPosition(tempTag.isPosition()); // 默认值
         tagMapper.updateById(tag);
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(user.getId())
@@ -212,6 +216,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         // 修改节点状态
         Tag deleted = new Tag();
         deleted.setId(tmp.getId());
+        deleted.setPosition(tmp.isPosition());
         deleted.setState(TagState.DELETED.getCode());
         tagMapper.updateById(deleted);
         // 插入一条彻底删除记录
@@ -257,9 +262,14 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         tag.setInnerOrder(insertTag.getInnerOrder());
         if (reOrderVo.isPosition())
             tag.setPosition(!tempTag.isPosition());
+        else
+            tag.setPosition(tempTag.isPosition());
+        // updateById会把表中的有默认值的字段给更新成默认值
+        // position有默认值
         tagMapper.updateById(tag);
         tag.setId(insertTag.getId());
         tag.setInnerOrder(tempTag.getInnerOrder());
+        tag.setPosition(insertTag.isPosition());
         tagMapper.updateById(tag);
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(userId)
@@ -281,6 +291,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag tag = new Tag();
         tag.setId(reparentVo.getTagId());
         tag.setFatherId(reparentVo.getFatherId());
+        tag.setPosition(father.isPosition());
         Integer order = tagMapper.selectMaxOrder(tag.getFatherId());
         if (order == null) tag.setInnerOrder(0);
         else tag.setInnerOrder(order+1);
@@ -300,6 +311,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag tag = new Tag();
         tag.setId(tagId);
         tag.setState(TagState.NORMAL.getCode());
+        tag.setPosition(temp.isPosition());
         tagMapper.updateById(tag);
         ThemeOperation operation = ThemeOperation.builder()
                 .operatorId(userId)

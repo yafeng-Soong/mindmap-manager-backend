@@ -30,6 +30,7 @@ spring:
     timeout: 5000
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
   mail:
     protocol: smtp
     host: smtp.qq.com
