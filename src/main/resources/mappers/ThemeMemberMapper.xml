@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.syf.papermanager.mapper.ThemeMemberMapper">
+    <select id="selectThemeIds" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT theme_id
+        FROM theme_member
+        WHERE user_id = #{userId}
+    </select>
+    <select id="selectByUserId" parameterType="java.lang.Integer" resultType="com.syf.papermanager.bean.vo.theme.ThemeResponseVo">
+        SELECT a.id, u.username as creator, a.name, a.description, a.create_time, a.update_time FROM
+        (SELECT t.id, t.name, t.creator_id, t.description, tm.create_time, t.update_time FROM theme t
+        INNER JOIN theme_member tm ON tm.theme_id = t.id
+		WHERE tm.user_id = #{userId} AND t.state = 0) a
+		INNER JOIN user u ON u.id = a.creator_id
+		ORDER BY a.create_time DESC
+    </select>
+    <select id="selectThemeList" resultType="com.syf.papermanager.bean.entity.Theme">
+        SELECT t.id, t.create_time, t.name, tm.user_id FROM theme t LEFT JOIN
+        (SELECT theme_id, user_id FROM theme_member WHERE user_id = #{userId}) tm
+        ON tm.theme_id = t.id
+        <where>
+            (t.creator_id = #{userId} OR tm.user_id = #{userId})
+            <if test="selfId != null">
+                AND t.id != #{selfId}
+            </if>
+        </where>
+    </select>
+    <select id="selectMembers" resultType="com.syf.papermanager.bean.vo.user.UserResponseVo">
+        SELECT * FROM user u RIGHT JOIN
+        (SELECT user_id FROM theme_member WHERE theme_id = #{themeId}) tm
+        ON tm.user_id = u.id
+    </select>
+</mapper>

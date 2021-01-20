@@ -10,7 +10,7 @@
 <!--/*@thymesVar id="email" type="String"*/-->
 <!--/*@thymesVar id="token" type="String"*/-->
 <!--/*@thymesVar id="baseUrl" type="String"*/-->
-<a href="#" th:href="@{'http://'+ ${baseUrl} + '/user/activate?token='+ ${token}}">click me</a>。
+<a href="#" th:href="@{'http://'+ ${apiUrl} + '/user/activate?token='+ ${token}}">click me</a>。
 若不是您本人的操作请忽略该邮件。
 </body>
 </html>

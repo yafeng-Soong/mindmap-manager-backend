@@ -11,22 +11,24 @@ import com.syf.papermanager.bean.enums.OperationType;
 import com.syf.papermanager.bean.enums.TagState;
 import com.syf.papermanager.bean.enums.ThemeState;
 import com.syf.papermanager.bean.vo.operation.OperationQueryVo;
+import com.syf.papermanager.bean.vo.page.PageQueryVo;
 import com.syf.papermanager.bean.vo.tag.request.TagRemovedQueryVo;
 import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
 import com.syf.papermanager.bean.vo.tag.response.TagRemovedVo;
-import com.syf.papermanager.bean.vo.theme.ThemeAddVo;
-import com.syf.papermanager.bean.vo.theme.ThemeCombineVo;
-import com.syf.papermanager.bean.vo.theme.ThemeQueryVo;
-import com.syf.papermanager.bean.vo.theme.ThemeUpdateVo;
+import com.syf.papermanager.bean.vo.theme.*;
+import com.syf.papermanager.bean.vo.user.MemberResponseVo;
+import com.syf.papermanager.bean.vo.user.UserResponseVo;
 import com.syf.papermanager.exception.FileUploadException;
 import com.syf.papermanager.exception.MyAuthenticationException;
 import com.syf.papermanager.exception.ThemeException;
 import com.syf.papermanager.mapper.*;
+import com.syf.papermanager.service.EmailService;
 import com.syf.papermanager.service.FileService;
 import com.syf.papermanager.service.ThemeService;
 import com.syf.papermanager.utils.MyIterables;
 import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,10 +37,7 @@ import org.xmind.core.*;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -61,16 +60,23 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     @Resource
     PaperMapper paperMapper;
     @Resource
+    UserMapper userMapper;
+    @Resource
+    ThemeMemberMapper themeMemberMapper;
+    @Resource
     ThemeOperationMapper themeOperationMapper;
     @Resource
     FileService fileService;
+    @Resource
+    EmailService emailService;
     @Override
     public List<Theme> selectList(Integer creatorId, Integer selfId) {
-        QueryWrapper<Theme> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("creator_id", creatorId);
-        queryWrapper.eq("state", ThemeState.NORMAL.getCode());
-        queryWrapper.ne(selfId != null, "id", selfId);
-        return themeMapper.selectList(queryWrapper);
+//        QueryWrapper<Theme> queryWrapper = new QueryWrapper<>();
+//        queryWrapper.eq("creator_id", creatorId);
+//        queryWrapper.eq("state", ThemeState.NORMAL.getCode());
+//        queryWrapper.ne(selfId != null, "id", selfId);
+//        return themeMapper.selectList(queryWrapper);
+        return themeMemberMapper.selectThemeList(creatorId, selfId);
     }
 
     @Override
@@ -88,8 +94,14 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     }
 
     @Override
+    public IPage<ThemeResponseVo> selectInvitedList(PageQueryVo queryVo, Integer userId) {
+       Page<ThemeResponseVo> page = new Page<>(queryVo.getCurrentPage(), queryVo.getPageSize());
+       return themeMemberMapper.selectByUserId(page, userId);
+    }
+
+    @Override
     public Page<TagOperationVo> selectOperations(OperationQueryVo queryVo, Integer userId) {
-        themeOperable(queryVo.getThemeId(), userId);
+        groupAble(queryVo.getThemeId(), userId); // 组成员可以查看操作记录
         Page<TagOperationDTO> page = new Page<>(queryVo.getCurrentPage(), queryVo.getPageSize());
         IPage<TagOperationDTO> data = themeOperationMapper.selectOperations(page, queryVo.getThemeId());
         Page<TagOperationVo> res = new Page<>();
@@ -106,7 +118,7 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
 
     @Override
     public Page<TagRemovedVo> selectRemovedTagList(TagRemovedQueryVo queryVo, Integer userId) {
-        themeOperable(queryVo.getThemeId(), userId);
+        groupAble(queryVo.getThemeId(), userId); // 组成员可以查看回收站
         Page<TagOperationDTO> page = new Page<>(queryVo.getCurrentPage(), queryVo.getPageSize());
         IPage<TagOperationDTO> data = themeOperationMapper.selectRemovedTag(page, queryVo.getThemeId(), TagState.REMOVED.getCode());
         Page<TagRemovedVo> res = new Page<>();
@@ -119,6 +131,19 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
                 .collect(Collectors.toList());
         res.setRecords(records);
         return res;
+    }
+
+    @Override
+    public MemberResponseVo selectMembers(Integer themeId, Integer userId) {
+        Theme tmp = groupAble(themeId, userId);
+        User creator = userMapper.selectById(tmp.getCreatorId());
+        if (creator == null)
+            throw new ThemeException("脑图创建者不存在");
+        MemberResponseVo members = new MemberResponseVo();
+        members.setCreator(new UserResponseVo(creator));
+        List<UserResponseVo> memberList = themeMemberMapper.selectMembers(themeId);
+        members.setMembers(memberList);
+        return members;
     }
 
     @Override
@@ -158,7 +183,7 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     @Override
     @Transactional
     public int deleteTheme(Integer themeId, Integer userId) {
-        themeOperable(themeId, userId);
+        deleteAble(themeId, userId);
         Integer rootId = tagMapper.selectRootTag(themeId);
         if (rootId == null)
             throw  new ThemeException("根节点不存在！");
@@ -272,7 +297,7 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
 
     @Override
     public int updateThemeState(Integer themeId, Integer userId, Integer stateCode) {
-        themeOperable(themeId, userId);
+        themeOperable(themeId, userId, stateCode);
         Theme theme = new Theme();
         theme.setId(themeId);
         theme.setState(stateCode);
@@ -284,10 +309,10 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
     public void combineTheme(ThemeCombineVo combineVo, Integer userId) {
         int themeId = combineVo.getFromThemeId();
         int toTagId = combineVo.getToTagId();
-        combineAble(themeId, userId);
+        themeOperable(themeId, userId); // 只能把自己的作为源
         Tag toTag = tagOperable(toTagId, userId);
         int toThemeId = toTag.getThemeId();
-        combineAble(toThemeId, userId);
+        groupAble(toThemeId, userId); // 团队的和自己的都可以作为目标
         if (toThemeId == themeId)
             throw new ThemeException("不能合并到自己");
         boolean position = toTag.isPosition();
@@ -327,29 +352,115 @@ public class ThemeServiceImpl extends ServiceImpl<ThemeMapper, Theme> implements
         themeOperationMapper.insert(operation);
     }
 
-    private void themeOperable(Integer themeId, Integer userId) {
+    @Override
+    public int inviteMember(ThemeInviteVo inviteVo, User creator) throws Exception {
+        int themeId = inviteVo.getThemeId();
+        int userId = creator.getId();
+        // themeOperable(themeId, userId); // 只有创建者可以邀请
+        Theme tmp = groupAble(themeId, userId); // 成员也可以邀请
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("email", inviteVo.getEmail());
+        User invitee = userMapper.selectOne(queryWrapper);
+        if (invitee == null)
+            throw new ThemeException("用户不存在");
+        if (invitee.getId().equals(userId))
+            throw new ThemeException("不能邀请自己");
+        ThemeMember themeMember = new ThemeMember();
+        themeMember.setThemeId(themeId);
+        themeMember.setUserId(invitee.getId());
+        try {
+            themeMemberMapper.insert(themeMember);
+        } catch (DuplicateKeyException e) {
+            throw new ThemeException("已经邀请过该成员：" + invitee.getUsername());
+        } catch (Exception e) {
+            throw e;
+        }
+        String content = "您被" + creator.getUsername() + "邀请参加脑图<" + tmp.getName() + ">的编辑，快去看看吧";
+        emailService.sendSimpleMail(inviteVo.getEmail(), content, "脑图邀请通知");
+        return 1;
+    }
+
+    @Override
+    public int exitTheme(Integer themeId, Integer userId) {
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("user_id", userId);
+        map.put("theme_id", themeId);
+        return themeMemberMapper.deleteByMap(map);
+    }
+
+    @Override
+    public int kickOffMember(ThemeKickOffVo kickVo, Integer userId) {
+        int themeId = kickVo.getThemeId();
+        themeOperable(themeId, userId);
+        int memberId = kickVo.getUserId();
+        return exitTheme(themeId, memberId);
+    }
+
+    private Theme themeOperable(Integer themeId, Integer userId) {
         Theme tmpTheme = themeMapper.selectById(themeId);
         if (tmpTheme == null)
             throw new ThemeException("脑图不存在");
-        // TODO 等待添加团队权限
+        if (!tmpTheme.getState().equals(ThemeState.NORMAL.getCode()))
+            throw new ThemeException("脑图当前状态不可操作");
         if (!tmpTheme.getCreatorId().equals(userId))
-            throw new MyAuthenticationException("您没有操作该脑图权限");
+            throw new MyAuthenticationException("您没有操作该脑图——" + tmpTheme.getName() + " 的权限");
+        return tmpTheme;
     }
 
-    private void combineAble(Integer themeId, Integer userId) {
+    private Theme deleteAble(Integer themeId, Integer userId) {
+        Theme tmpTheme = themeMapper.selectById(themeId);
+        if (tmpTheme == null)
+            throw new ThemeException("脑图不存在");
+        if (!tmpTheme.getState().equals(ThemeState.REMOVED.getCode()))
+            throw new ThemeException("脑图不在回收站");
+        if (!tmpTheme.getCreatorId().equals(userId))
+            throw new MyAuthenticationException("您没有操作该脑图——" + tmpTheme.getName() + " 的权限");
+        return tmpTheme;
+    }
+
+    private Theme themeOperable(Integer themeId, Integer userId, Integer state) {
         Theme tmp = themeMapper.selectById(themeId);
         if (tmp == null)
-            throw new ThemeException("脑图不能存在！");
+            throw new ThemeException("脑图不存在");
+        if (tmp.getState().equals(state)) // 当前状态与目标状态一致
+            throw new ThemeException("脑图状态有误");
+        if (!tmp.getCreatorId().equals(userId))
+            throw new MyAuthenticationException("您没有操作该脑图——" + tmp.getName() + " 的权限");
+        return tmp;
+    }
+
+//    private void combineAble(Integer themeId, Integer userId) {
+//        Theme tmp = themeMapper.selectById(themeId);
+//        if (tmp == null)
+//            throw new ThemeException("脑图不存在！");
+//        QueryWrapper<ThemeMember> queryWrapper = new QueryWrapper<>();
+//        queryWrapper.eq("user_id", userId);
+//        queryWrapper.eq("theme_id", themeId);
+//        int count = themeMemberMapper.selectCount(queryWrapper);
+//        if (count == 0 && !tmp.getCreatorId().equals(userId))
+//            throw new  MyAuthenticationException("您没有合并到目标脑图的权限！");
+//    }
+
+    private Theme groupAble(Integer themeId, Integer userId) {
+        Theme tmp = themeMapper.selectById(themeId);
+        if (tmp == null)
+            throw new ThemeException("脑图不存在！");
+        if (!tmp.getState().equals(ThemeState.NORMAL.getCode()))
+            throw new ThemeException("脑图当前状态不可操作");
+        QueryWrapper<ThemeMember> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        queryWrapper.eq("theme_id", themeId);
+        int count = themeMemberMapper.selectCount(queryWrapper);
+        if (count == 0 && !tmp.getCreatorId().equals(userId))
+            throw new MyAuthenticationException("您没有操作脑图——" + tmp.getName() + " 的权限！");
+        return tmp;
     }
 
     private Tag tagOperable(Integer tagId, Integer userId) {
         Tag tmp = tagMapper.selectById(tagId);
         if (tmp == null)
             throw new ThemeException("新的父节点不存在");
-        Theme newTheme = themeMapper.selectById(tmp.getThemeId());
-        // TODO 等待添加团队权限
-        if (!newTheme.getCreatorId().equals(userId))
-            throw new MyAuthenticationException("您没有合并权限");
+        // 不用判断对该tag有没有操作权限，只用判断对tag所属的theme有没有操作权限
         return tmp;
     }
 }

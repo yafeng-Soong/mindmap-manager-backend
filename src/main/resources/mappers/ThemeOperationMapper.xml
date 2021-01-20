@@ -2,16 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.syf.papermanager.mapper.ThemeOperationMapper">
     <select id="selectRemovedTag" resultType="com.syf.papermanager.bean.dto.TagOperationDTO">
-        SELECT username, avatar, b.tag_id, b.name, b.create_time
+        SELECT u.username, u.avatar, a.name, a.tag_id, a.create_time
         FROM user u INNER JOIN
-            (
-                SELECT op.tag_id, t.name, op.type, op.operator_id, MAX(op.create_time) as create_time
-                FROM `theme_operation` op INNER JOIN tag t
-                ON op.tag_id = t.id
-                WHERE op.theme_id = #{themeId} and t.state = #{state} and op.type = 2
-                GROUP BY op.tag_id
-            ) b
-        ON u.id = b.operator_id ORDER BY b.create_time DESC
+        (SELECT op.operator_id, t.name, t.id as tag_id, op.create_time
+        FROM theme_operation op INNER JOIN
+        (SELECT * FROM tag WHERE state = #{state} AND theme_id = #{themeId}) t
+        ON op.tag_id = t.id AND op.create_time = t.update_time WHERE op.type = 2
+        ) a
+        ON a.operator_id = u.id ORDER BY create_time DESC
     </select>
     <select id="selectOperations" resultType="com.syf.papermanager.bean.dto.TagOperationDTO">
         SELECT username, avatar,b.type, b.name, b.create_time

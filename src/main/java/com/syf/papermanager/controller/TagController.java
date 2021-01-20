@@ -34,18 +34,20 @@ public class TagController extends BaseController {
     TagService tagService;
     @ApiOperation("获取一个脑图中的树形节点信息")
     @GetMapping("/getTree")
-    public ResponseEntity getTree(int themeId) {
+    public ResponseEntity getTree(@RequestParam("themeId") Integer themeId) {
         ResponseEntity response = new ResponseEntity();
-        List<TagTreeResponseVo> res = tagService.selectTreeByThemeId(themeId);
+        User currentUser = getCurrentUser();
+        List<TagTreeResponseVo> res = tagService.selectTreeByThemeId(themeId, currentUser.getId());
         response.setData(res);
         return response;
     }
 
     @ApiOperation("获取一个脑图中所有节点的id和name信息")
     @GetMapping("/getSimpleList")
-    public ResponseEntity getSimpleList(int themeId) {
+    public ResponseEntity getSimpleList(@RequestParam("themeId") Integer themeId) {
         ResponseEntity response = new ResponseEntity();
-        List<TagSimpleResponseVo> res = tagService.selectSimpleList(themeId);
+        User currentUser = getCurrentUser();
+        List<TagSimpleResponseVo> res = tagService.selectSimpleList(themeId, currentUser.getId());
         response.setData(res);
         return response;
     }
@@ -122,7 +124,7 @@ public class TagController extends BaseController {
 
     @ApiOperation("从回收站恢复节点")
     @GetMapping("/recover")
-    public ResponseEntity recoverTag(int tagId) {
+    public ResponseEntity recoverTag(@RequestParam("tagId") Integer tagId) {
         ResponseEntity response = new ResponseEntity();
         User currentUser = getCurrentUser();
         tagService.recoverTag(tagId, currentUser.getId());

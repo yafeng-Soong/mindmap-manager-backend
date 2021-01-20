@@ -1,5 +1,6 @@
 package com.syf.papermanager.bean.vo.page;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -38,6 +39,14 @@ public class PageResponseVo<T> {
 
     public PageResponseVo(Page page, List<T> data) {
         this.data = data;
+        currentPage = page.getCurrent();
+        pageSize = page.getSize();
+        total = page.getTotal();
+        pages = page.getPages();
+    }
+
+    public PageResponseVo(IPage page) {
+        this.data = page.getRecords();
         currentPage = page.getCurrent();
         pageSize = page.getSize();
         total = page.getTotal();

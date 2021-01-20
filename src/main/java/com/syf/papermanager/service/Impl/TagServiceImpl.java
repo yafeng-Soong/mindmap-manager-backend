@@ -5,12 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.syf.papermanager.bean.dto.TagOperationDTO;
-import com.syf.papermanager.bean.entity.Paper;
-import com.syf.papermanager.bean.entity.ThemeOperation;
-import com.syf.papermanager.bean.entity.User;
+import com.syf.papermanager.bean.entity.*;
 import com.syf.papermanager.bean.enums.OperationType;
 import com.syf.papermanager.bean.enums.TagState;
-import com.syf.papermanager.bean.entity.Tag;
+import com.syf.papermanager.bean.enums.ThemeState;
 import com.syf.papermanager.bean.vo.tag.request.*;
 import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
 import com.syf.papermanager.bean.vo.tag.response.TagRemovedVo;
@@ -18,10 +16,8 @@ import com.syf.papermanager.bean.vo.tag.response.TagSimpleResponseVo;
 import com.syf.papermanager.bean.vo.tag.response.TagTreeResponseVo;
 import com.syf.papermanager.exception.MyAuthenticationException;
 import com.syf.papermanager.exception.TagException;
-import com.syf.papermanager.mapper.PaperMapper;
-import com.syf.papermanager.mapper.PaperTagMapper;
-import com.syf.papermanager.mapper.TagMapper;
-import com.syf.papermanager.mapper.ThemeOperationMapper;
+import com.syf.papermanager.exception.ThemeException;
+import com.syf.papermanager.mapper.*;
 import com.syf.papermanager.service.FileService;
 import com.syf.papermanager.service.TagService;
 import org.springframework.stereotype.Service;
@@ -49,6 +45,10 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     @Resource
     PaperMapper paperMapper;
     @Resource
+    ThemeMemberMapper themeMemberMapper;
+    @Resource
+    ThemeMapper themeMapper;
+    @Resource
     FileService fileService;
     /***
      * 数据库中每个节点只有自己父节点信息，使用深度优先遍历构建树形结构
@@ -56,16 +56,11 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
      * @return 树形结构的taglist
      */
     @Override
-    public List<TagTreeResponseVo> selectTreeByThemeId(Integer themeId) {
+    public List<TagTreeResponseVo> selectTreeByThemeId(Integer themeId, Integer userId) {
         Set<Integer> tags = new HashSet<>(); // 记录已经访问过的节点id，防止出现环路
         Queue<TagTreeResponseVo> Q = new LinkedList<>();
         List<TagTreeResponseVo> res = new ArrayList<>();
-        QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("theme_id", themeId);
-        queryWrapper.eq("father_id", 0);
-        queryWrapper.eq("state", TagState.NORMAL.getCode());
-        Tag tmp = tagMapper.selectOne(queryWrapper);
-        if (tmp == null) return res;
+        Tag tmp = selectAble(themeId, userId);
         TagTreeResponseVo root = new TagTreeResponseVo(tmp);
         Q.add(root);
         while (Q.size() > 0) {
@@ -73,7 +68,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
             if (tags.contains(top.getTagId()))
                 break;
             tags.add(top.getTagId());
-            queryWrapper = new QueryWrapper<>();
+            QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("father_id", top.getTagId());
             queryWrapper.eq("state", TagState.NORMAL.getCode());
             List<Tag> children = tagMapper.selectList(queryWrapper);
@@ -90,16 +85,11 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
     }
 
     @Override
-    public List<TagSimpleResponseVo> selectSimpleList(Integer themeId) {
+    public List<TagSimpleResponseVo> selectSimpleList(Integer themeId, Integer userId) {
         Set<Integer> tags = new HashSet<>(); // 记录已经访问过的节点id，防止出现环路
         Queue<Integer> Q = new LinkedList<>();
         List<TagSimpleResponseVo> res = new ArrayList<>();
-        QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("theme_id", themeId);
-        queryWrapper.eq("father_id", 0);
-        queryWrapper.eq("state", TagState.NORMAL.getCode());
-        Tag tmp = tagMapper.selectOne(queryWrapper);
-        if (tmp == null) return res;
+        Tag tmp = selectAble(themeId, userId);
         Q.add(tmp.getId());
         while (Q.size() > 0) {
             int top = Q.poll();
@@ -108,7 +98,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
             tags.add(top);
             Tag tag = tagMapper.selectById(top);
             res.add(new TagSimpleResponseVo(tag));
-            queryWrapper = new QueryWrapper<>();
+            QueryWrapper<Tag> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("father_id", top);
             queryWrapper.eq("state", TagState.NORMAL.getCode());
             List<Tag> tagList = tagMapper.selectList(queryWrapper);
@@ -124,6 +114,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag father = tagMapper.selectById(addVo.getFatherId());
         if (father == null)
             throw new TagException("不存在该父节点");
+        groupAble(father.getThemeId(), userId);
         Tag tag = new Tag(addVo);
         tag.setCreatorId(userId);
         tag.setThemeId(father.getThemeId());
@@ -326,9 +317,10 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag tempTag = tagMapper.selectById(tagId);
         if (tempTag == null)
             throw new TagException("被操作节点不存在");
-        if (tempTag.getState() == 2)
+        groupAble(tempTag.getThemeId(), userId);
+        if (tempTag.getState().equals(TagState.LOCKED.getCode()))
             throw new MyAuthenticationException("节点已被锁定，无法操作");
-        if (tempTag.getState() != 0)
+        if (!tempTag.getState().equals(TagState.NORMAL.getCode()))
             throw new TagException("节点不可操作");
         int fatherId = tempTag.getFatherId();
         while (fatherId != 0) {
@@ -345,6 +337,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag tmp = tagMapper.selectById(tagId);
         if (tmp == null)
             throw new TagException("节点不存在！");
+        groupAble(tmp.getThemeId(), userId);
         if (!tmp.getState().equals(TagState.REMOVED.getCode()))
             throw new TagException("只能恢复被删除节点");
         // TODO 等待添加组权限验证
@@ -355,9 +348,47 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
         Tag tmp = tagMapper.selectById(tagId);
         if (tmp == null)
             throw new TagException("节点不存在！");
+        groupAble(tmp.getThemeId(), userId);
         if (!tmp.getState().equals(TagState.REMOVED.getCode()))
             throw new TagException("节点不在回收站！");
         // TODO 等待添加权限验证
         return tmp;
+    }
+
+    private Tag selectAble(Integer themeId, Integer userId) {
+        Theme theme = themeMapper.selectById(themeId);
+        if (theme == null)
+            throw new ThemeException("脑图不存在！");
+        if (!theme.getState().equals(ThemeState.NORMAL.getCode()))
+            throw new ThemeException("脑图当前状态不可操作");
+        QueryWrapper<ThemeMember> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        queryWrapper.eq("theme_id", themeId);
+        int count = themeMemberMapper.selectCount(queryWrapper);
+        if (count == 0 && !theme.getCreatorId().equals(userId))
+            throw new MyAuthenticationException("您没有操作脑图——" + theme.getName() + " 的权限！");
+        QueryWrapper<Tag> query = new QueryWrapper<>();
+        query.eq("theme_id", themeId);
+        query.eq("father_id", 0);
+        query.eq("state", TagState.NORMAL.getCode());
+        Tag tag = tagMapper.selectOne(query);
+        if (tag == null)
+            throw new TagException("根节点不存在");
+        return tag;
+    }
+
+    // 团队验证
+    private void groupAble(Integer themeId, Integer userId) {
+        Theme tmp = themeMapper.selectById(themeId);
+        if (tmp == null)
+            throw new ThemeException("脑图不存在！");
+        if (!tmp.getState().equals(ThemeState.NORMAL.getCode()))
+            throw new ThemeException("脑图当前状态不可操作");
+        QueryWrapper<ThemeMember> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        queryWrapper.eq("theme_id", themeId);
+        int count = themeMemberMapper.selectCount(queryWrapper);
+        if (count == 0 && !tmp.getCreatorId().equals(userId))
+            throw new MyAuthenticationException("您没有操作脑图——" + tmp.getName() + " 的权限！");
     }
 }

@@ -1,5 +1,6 @@
 package com.syf.papermanager.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.syf.papermanager.base.BaseController;
 import com.syf.papermanager.bean.entity.ResponseEntity;
@@ -7,11 +8,13 @@ import com.syf.papermanager.bean.entity.Theme;
 import com.syf.papermanager.bean.entity.User;
 import com.syf.papermanager.bean.enums.ThemeState;
 import com.syf.papermanager.bean.vo.operation.OperationQueryVo;
+import com.syf.papermanager.bean.vo.page.PageQueryVo;
 import com.syf.papermanager.bean.vo.page.PageResponseVo;
 import com.syf.papermanager.bean.vo.tag.request.TagRemovedQueryVo;
 import com.syf.papermanager.bean.vo.tag.response.TagOperationVo;
 import com.syf.papermanager.bean.vo.tag.response.TagRemovedVo;
 import com.syf.papermanager.bean.vo.theme.*;
+import com.syf.papermanager.bean.vo.user.MemberResponseVo;
 import com.syf.papermanager.service.ThemeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -49,9 +52,7 @@ public class ThemeController extends BaseController {
         List<Theme> list = themeService.selectList(currentUser.getId(), selfId);
         List<ThemeResponseVo> res = list.stream()
                 .map(source -> {
-                    ThemeResponseVo target = new ThemeResponseVo();
-                    BeanUtils.copyProperties(source, target);
-                    target.setCreator(currentUser.getUsername());
+                    ThemeResponseVo target = new ThemeResponseVo(source);
                     return target;
                 }).collect(Collectors.toList());
         response.setData(res);
@@ -76,6 +77,17 @@ public class ThemeController extends BaseController {
         return response;
     }
 
+    @ApiOperation("查询团队脑图")
+    @PostMapping("/getInvitedList")
+    public ResponseEntity getInvitedPageList(@RequestBody @Validated PageQueryVo queryVo) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        IPage<ThemeResponseVo> res = themeService.selectInvitedList(queryVo, currentUser.getId());
+        PageResponseVo<ThemeResponseVo> data = new PageResponseVo<>(res);
+        response.setData(data);
+        return response;
+    }
+
     @ApiOperation("获取脑图操作记录")
     @PostMapping("/getOperations")
     public ResponseEntity getRecentOperations(@RequestBody @Validated OperationQueryVo queryVo) {
@@ -94,6 +106,16 @@ public class ThemeController extends BaseController {
         User currentUser = getCurrentUser();
         Page<TagRemovedVo> res = themeService.selectRemovedTagList(queryVo, currentUser.getId());
         PageResponseVo<TagRemovedVo> data = new PageResponseVo<>(res);
+        response.setData(data);
+        return response;
+    }
+
+    @ApiOperation("获取一个脑图的创建者和成员")
+    @GetMapping("/getMembers")
+    public ResponseEntity getMembers(@RequestParam("themeId") Integer themeId) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        MemberResponseVo data = themeService.selectMembers(themeId, currentUser.getId());
         response.setData(data);
         return response;
     }
@@ -170,6 +192,36 @@ public class ThemeController extends BaseController {
         User currentUser = getCurrentUser();
         themeService.deleteTheme(themeId, currentUser.getId());
         response.setData("删除成功！");
+        return response;
+    }
+
+    @ApiOperation("邀请成员")
+    @PostMapping("/invite")
+    public ResponseEntity invite(@RequestBody @Validated ThemeInviteVo inviteVo) throws Exception {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        themeService.inviteMember(inviteVo, currentUser);
+        response.setData("邀请成功！");
+        return response;
+    }
+
+    @ApiOperation("退出脑图")
+    @GetMapping("/exit")
+    public ResponseEntity exit(@RequestParam("themeId") Integer themeId) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        themeService.exitTheme(themeId, currentUser.getId());
+        response.setData("退出成功");
+        return response;
+    }
+
+    @ApiOperation("踢出成员")
+    @PostMapping("/kickOff")
+    public ResponseEntity kickOff(@RequestBody @Validated ThemeKickOffVo kickVo) {
+        ResponseEntity response = new ResponseEntity();
+        User currentUser = getCurrentUser();
+        themeService.kickOffMember(kickVo, currentUser.getId());
+        response.setData("成功踢出成员");
         return response;
     }
 }

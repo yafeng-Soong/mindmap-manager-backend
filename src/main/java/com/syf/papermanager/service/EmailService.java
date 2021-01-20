@@ -47,6 +47,8 @@ public class EmailService {
     private String frontAddress;
     @Value("${front.port}")
     private int frontPort;
+    @Value("${back.url}")
+    private String apiUrl;
 
     /**
      * 发送模板邮件
@@ -56,7 +58,7 @@ public class EmailService {
      */
 
     public void sendTemplateMail(String email,String template,String subject) throws Exception {
-        String baseUrl = address + ":" + serverPort;
+        //String baseUrl = address + ":" + serverPort;
         String frontUrl = frontAddress + ":" + frontPort;
         MimeMessage message = javaMailSender.createMimeMessage();
         //为了防止接收方丢入垃圾箱，可以在header里加上Outlook
@@ -70,7 +72,8 @@ public class EmailService {
         Context context = new Context();
         //设置模板中的变量
         context.setVariable("email", email);
-        context.setVariable("baseUrl", baseUrl);
+        //context.setVariable("baseUrl", baseUrl);
+        context.setVariable("apiUrl", apiUrl);
         context.setVariable("frontUrl", frontUrl);
         //生成UUID作为tmpKey
         String token = UUID.randomUUID().toString().replaceAll("-", "");
@@ -79,6 +82,19 @@ public class EmailService {
         //指定template模板
         String emailContent = templateEngine.process(template, context);
         helper.setText(emailContent, true);
+        javaMailSender.send(message);
+    }
+
+    public void sendSimpleMail(String email, String content, String subject) throws Exception {
+        MimeMessage message = javaMailSender.createMimeMessage();
+        //为了防止接收方丢入垃圾箱，可以在header里加上Outlook
+        message.addHeader("X-Mailer","Microsoft Outlook Express 6.00.2900.2869");
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        //指定源、目的地、主题
+        helper.setFrom(sender);
+        helper.setTo(email);
+        helper.setSubject(subject);
+        helper.setText(content);
         javaMailSender.send(message);
     }
 }
