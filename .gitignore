@@ -37,3 +37,6 @@ build/
 
 ### outer config ###
 /config/application.yml
+
+### logs ###
+/logs
